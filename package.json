@@ -1,0 +1,44 @@
+{
+  "name": "auditorium-booking-management",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Internal Auditorium Booking Management System",
+  "workspaces": [
+    "shared",
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "npm run dev:backend & npm run dev:frontend",
+    "dev:backend": "npm run dev --workspace=@auditorium/backend",
+    "dev:frontend": "npm run dev --workspace=@auditorium/frontend",
+    "start": "npm run start --workspace=@auditorium/backend",
+    "start:backend": "npm run start --workspace=@auditorium/backend",
+    "build": "npm run build --workspaces --if-present",
+    "build:backend": "npm run build --workspace=@auditorium/backend",
+    "build:frontend": "npm run build --workspace=@auditorium/frontend",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck:backend": "npm run typecheck --workspace=@auditorium/backend",
+    "typecheck:frontend": "npm run typecheck --workspace=@auditorium/frontend",
+    "typecheck:shared": "npm run typecheck --workspace=@auditorium/shared",
+    "db:generate": "npm run db:generate --workspace=@auditorium/backend",
+    "db:migrate": "npm run db:migrate --workspace=@auditorium/backend",
+    "db:push": "npm run db:push --workspace=@auditorium/backend",
+    "db:studio": "npm run db:studio --workspace=@auditorium/backend",
+    "auth:create-dev-user": "npm run auth:create-dev-user --workspace=@auditorium/backend",
+    "auth:provision-prod-users": "npm run auth:provision-prod-users --workspace=@auditorium/backend",
+    "test": "npm run test --workspace=@auditorium/backend"
+  },
+
+  "keywords": [
+    "auditorium",
+    "booking",
+    "fastify",
+    "react",
+    "typescript",
+    "drizzle",
+    "neon"
+  ],
+  "author": "",
+  "license": "UNLICENSED"
+}

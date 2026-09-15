@@ -1,0 +1,318 @@
+import fs from 'fs';
+import { eq, inArray } from 'drizzle-orm';
+import { db, pool } from '../db/index.js';
+import * as schema from '../db/schema/index.js';
+
+// Parse credentials from backend/.env safely
+const envPath = 'c:/Users/RUFAID/OneDrive/Desktop/auditorium/backend/.env';
+const envContent = fs.readFileSync(envPath, 'utf8');
+let email = '', password = '';
+for (const line of envContent.split('\n')) {
+  if (line.startsWith('DEV_USER_EMAIL=')) email = line.split('=')[1].trim().replace(/['"]/g, '');
+  if (line.startsWith('DEV_USER_PASSWORD=')) password = line.split('=')[1].trim().replace(/['"]/g, '');
+}
+
+const BASE_URL = 'http://127.0.0.1:5000/api';
+const createdBookingIds: string[] = [];
+
+async function assert(condition: boolean, message: string) {
+  if (!condition) {
+    throw new Error(`Assertion failed: ${message}`);
+  }
+}
+
+async function runTestSuite() {
+  console.log('🚀 Starting Full Booking API Integration Test Suite...\n');
+
+  // Pre-cleanup any leftover test sessions from previous runs
+  const testSessions = await db
+    .select({ bookingId: schema.bookingSessions.bookingId })
+    .from(schema.bookingSessions)
+    .where(eq(schema.bookingSessions.bookingDate, '2099-06-01'));
+  if (testSessions.length > 0) {
+    const ids = testSessions.map((s) => s.bookingId);
+    await db.delete(schema.bookings).where(inArray(schema.bookings.id, ids));
+  }
+
+  try {
+
+    // ==========================================
+    // TEST 1: Unauthenticated Requests (401)
+    // ==========================================
+    console.log('Test 1: Unauthenticated GET /api/bookings & POST /api/bookings');
+    const unauthGet = await fetch(`${BASE_URL}/bookings`);
+    assert(unauthGet.status === 401, `GET /api/bookings without auth should be 401, got ${unauthGet.status}`);
+
+    const unauthPost = await fetch(`${BASE_URL}/bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventName: 'Test' }),
+    });
+    assert(unauthPost.status === 401, `POST /api/bookings without auth should be 401, got ${unauthPost.status}`);
+    console.log('  ✅ Passed: Both endpoints return 401 Unauthorized.');
+
+    // ==========================================
+    // AUTHENTICATE FOR SUBSEQUENT TESTS
+    // ==========================================
+    console.log('\nAuthenticating development user...');
+    const loginRes = await fetch(`${BASE_URL}/auth/sign-in/email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Origin': 'http://localhost:5173',
+      },
+      body: JSON.stringify({ email, password }),
+    });
+    assert(loginRes.status === 200, `Login should succeed, got ${loginRes.status}`);
+    const cookieHeaders = loginRes.headers.getSetCookie?.() || [loginRes.headers.get('set-cookie')].filter(Boolean);
+    const sessionCookie = cookieHeaders.map((c) => c.split(';')[0]).join('; ');
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      'Origin': 'http://localhost:5173',
+      'Cookie': sessionCookie,
+    };
+    console.log('  ✅ Authenticated with valid session cookie.');
+
+    // ==========================================
+    // TEST 2: Validation Errors (400)
+    // ==========================================
+    console.log('\nTest 2: Validation - Duplicate slots in same payload');
+    const dupSlotRes = await fetch(`${BASE_URL}/bookings`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        eventName: 'Duplicate Test',
+        contactName: 'Alice',
+        contactPhone: '9876543210',
+        eventType: 'Seminar',
+        totalAmount: 5000,
+        sessions: [
+          { date: '2099-05-10', session: 'MORNING' },
+          { date: '2099-05-10', session: 'MORNING' },
+        ],
+      }),
+    });
+    assert(dupSlotRes.status === 400, `Expected 400 for duplicate slots, got ${dupSlotRes.status}`);
+    const dupSlotBody = await dupSlotRes.json();
+    assert(dupSlotBody.error === 'VALIDATION_ERROR', `Expected VALIDATION_ERROR code, got ${dupSlotBody.error}`);
+    console.log('  ✅ Passed: Duplicate slots in request rejected with 400 VALIDATION_ERROR.');
+
+    console.log('\nTest 3: Validation - Empty sessions / invalid amounts');
+    const invalidRes = await fetch(`${BASE_URL}/bookings`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        eventName: 'Invalid Test',
+        contactName: 'Bob',
+        contactPhone: '1234', // too short
+        eventType: 'Meeting',
+        totalAmount: -100, // negative amount
+        sessions: [], // empty sessions
+      }),
+    });
+    assert(invalidRes.status === 400, `Expected 400 for invalid data, got ${invalidRes.status}`);
+    console.log('  ✅ Passed: Invalid inputs rejected with 400.');
+
+    // ==========================================
+    // TEST 4: Successful Multi-Session Booking (201)
+    // ==========================================
+    console.log('\nTest 4: Create Valid Multi-Session Booking (201)');
+    const createRes = await fetch(`${BASE_URL}/bookings`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        eventName: 'Annual Tech Summit 2099',
+        contactName: 'Sarah Connor',
+        contactPhone: '9876543210',
+        eventType: 'Conference',
+        totalAmount: 35000,
+        notes: 'VIP setup required in main hall',
+        sessions: [
+          { date: '2099-06-01', session: 'MORNING' },
+          { date: '2099-06-01', session: 'EVENING' },
+        ],
+      }),
+    });
+    assert(createRes.status === 201, `Expected 201 Created, got ${createRes.status}`);
+    const booking1 = await createRes.json();
+    createdBookingIds.push(booking1.id);
+    assert(booking1.id && booking1.sessions?.length === 2, 'Expected booking with 2 sessions');
+    assert(booking1.status === 'CONFIRMED', 'Expected status CONFIRMED');
+    assert(booking1.createdBy, 'Expected createdBy to be set automatically');
+    console.log(`  ✅ Passed: Booking created with ID ${booking1.id} and 2 confirmed sessions.`);
+
+    // ==========================================
+    // TEST 5: Direct Slot Conflict (409)
+    // ==========================================
+    console.log('\nTest 5: Reject Booking for Already Booked Slot (409 Conflict)');
+    const conflictRes = await fetch(`${BASE_URL}/bookings`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        eventName: 'Clashing Event',
+        contactName: 'John Smith',
+        contactPhone: '9112233445',
+        eventType: 'Wedding',
+        totalAmount: 20000,
+        sessions: [{ date: '2099-06-01', session: 'MORNING' }],
+      }),
+    });
+    assert(conflictRes.status === 409, `Expected 409 Conflict, got ${conflictRes.status}`);
+    const conflictBody = await conflictRes.json();
+    assert(conflictBody.error === 'BOOKING_CONFLICT', `Expected BOOKING_CONFLICT code, got ${conflictBody.error}`);
+    console.log('  ✅ Passed: Conflicting booking rejected with 409 BOOKING_CONFLICT.');
+
+    // ==========================================
+    // TEST 6: Atomic Transaction Rollback on Partial Conflict
+    // ==========================================
+    console.log('\nTest 6: Atomic Rollback when only 1 out of multiple slots conflicts');
+    const partialConflictRes = await fetch(`${BASE_URL}/bookings`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        eventName: 'Multi-Day Partial Clash',
+        contactName: 'Agent Smith',
+        contactPhone: '9000090000',
+        eventType: 'Workshop',
+        totalAmount: 50000,
+        sessions: [
+          { date: '2099-06-01', session: 'EVENING' }, // CONFLICT!
+          { date: '2099-06-02', session: 'MORNING' }, // FREE slot
+        ],
+      }),
+    });
+    assert(partialConflictRes.status === 409, `Expected 409 Conflict, got ${partialConflictRes.status}`);
+
+    // Verify free slot 2099-06-02 MORNING was rolled back and NOT created
+    const checkFreeSlot = await db
+      .select()
+      .from(schema.bookingSessions)
+      .where(eq(schema.bookingSessions.bookingDate, '2099-06-02'));
+    assert(checkFreeSlot.length === 0, `Free slot must NOT be created due to transaction rollback! Found: ${checkFreeSlot.length}`);
+    console.log('  ✅ Passed: Entire transaction rolled back atomically (0 rows created for free slots).');
+
+    // ==========================================
+    // TEST 7: List Bookings & Filters (200)
+    // ==========================================
+    console.log('\nTest 7: GET /api/bookings with search filter');
+    const searchRes = await fetch(`${BASE_URL}/bookings?search=Tech+Summit`, { headers: authHeaders });
+    assert(searchRes.status === 200, `Expected 200, got ${searchRes.status}`);
+    const searchResults = await searchRes.json();
+    assert(searchResults.length > 0 && searchResults.some((b: any) => b.id === booking1.id), 'Search must return created booking');
+    console.log(`  ✅ Passed: Found ${searchResults.length} matching booking(s).`);
+
+    // ==========================================
+    // TEST 8: Get Booking by ID (200 & 404)
+    // ==========================================
+    console.log('\nTest 8: GET /api/bookings/:id');
+    const getSingleRes = await fetch(`${BASE_URL}/bookings/${booking1.id}`, { headers: authHeaders });
+    assert(getSingleRes.status === 200, `Expected 200, got ${getSingleRes.status}`);
+    const singleData = await getSingleRes.json();
+    assert(singleData.id === booking1.id, 'Expected matching booking ID');
+
+    const notFoundRes = await fetch(`${BASE_URL}/bookings/00000000-0000-0000-0000-000000000000`, { headers: authHeaders });
+    assert(notFoundRes.status === 404, `Expected 404 for missing booking, got ${notFoundRes.status}`);
+    console.log('  ✅ Passed: Retrieved single booking and verified 404 for missing ID.');
+
+    // ==========================================
+    // TEST 9: Update Booking (200)
+    // ==========================================
+    console.log('\nTest 9: PATCH /api/bookings/:id');
+    const updateRes = await fetch(`${BASE_URL}/bookings/${booking1.id}`, {
+      method: 'PATCH',
+      headers: authHeaders,
+      body: JSON.stringify({
+        eventName: 'Annual Tech Summit 2099 (Updated)',
+        totalAmount: 40000,
+        notes: 'Updated notes: extra microphones added',
+      }),
+    });
+    assert(updateRes.status === 200, `Expected 200 on update, got ${updateRes.status}`);
+    const updatedData = await updateRes.json();
+    assert(updatedData.eventName === 'Annual Tech Summit 2099 (Updated)', 'Expected updated eventName');
+    assert(updatedData.totalAmount === '40000.00', 'Expected updated totalAmount');
+    console.log('  ✅ Passed: Booking updated successfully.');
+
+    // ==========================================
+    // TEST 10: Cancel Booking & Release Slots (200)
+    // ==========================================
+    console.log('\nTest 10: POST /api/bookings/:id/cancel');
+    const cancelRes = await fetch(`${BASE_URL}/bookings/${booking1.id}/cancel`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({}),
+    });
+    assert(cancelRes.status === 200, `Expected 200 on cancel, got ${cancelRes.status}`);
+    const cancelledData = await cancelRes.json();
+    assert(cancelledData.status === 'CANCELLED', 'Expected status CANCELLED');
+    assert(cancelledData.sessions.every((s: any) => s.status === 'CANCELLED'), 'All sessions must be CANCELLED');
+    console.log('  ✅ Passed: Booking and its sessions cancelled atomically.');
+
+    // ==========================================
+    // TEST 11: Second Cancellation Rejection (409)
+    // ==========================================
+    console.log('\nTest 11: Attempt Second Cancellation on already cancelled booking');
+    const secondCancelRes = await fetch(`${BASE_URL}/bookings/${booking1.id}/cancel`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({}),
+    });
+    assert(secondCancelRes.status === 409, `Expected 409 on second cancel, got ${secondCancelRes.status}`);
+    const secondCancelBody = await secondCancelRes.json();
+    assert(secondCancelBody.error === 'ALREADY_CANCELLED', `Expected ALREADY_CANCELLED error, got ${secondCancelBody.error}`);
+    console.log('  ✅ Passed: Second cancellation rejected with 409 ALREADY_CANCELLED.');
+
+
+    // ==========================================
+    // TEST 12: Cancelled Slot is Re-Bookable (201)
+    // ==========================================
+    console.log('\nTest 12: Re-book Previously Cancelled Slot');
+    const rebookRes = await fetch(`${BASE_URL}/bookings`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        eventName: 'New Customer for Cancelled Slot',
+        contactName: 'Emma Watson',
+        contactPhone: '9112233445',
+        eventType: 'Drama Play',
+        totalAmount: 18000,
+        sessions: [{ date: '2099-06-01', session: 'MORNING' }],
+      }),
+    });
+    assert(rebookRes.status === 201, `Expected 201 on re-booking released slot, got ${rebookRes.status}`);
+    const booking2 = await rebookRes.json();
+    createdBookingIds.push(booking2.id);
+    console.log(`  ✅ Passed: Cancelled slot successfully booked by new booking ID ${booking2.id}.`);
+
+    // ==========================================
+    // TEST 13: Audit Logs Verification
+    // ==========================================
+    console.log('\nTest 13: Audit Logs Trail Verification');
+    const auditEntries = await db
+      .select()
+      .from(schema.auditLogs)
+      .where(inArray(schema.auditLogs.bookingId, createdBookingIds));
+
+    const actions = auditEntries.map((a) => a.action);
+    console.log('  Found Audit Log Actions:', actions);
+    assert(actions.includes('BOOKING_CREATED'), 'Expected BOOKING_CREATED audit log');
+    assert(actions.includes('BOOKING_UPDATED'), 'Expected BOOKING_UPDATED audit log');
+    assert(actions.includes('BOOKING_CANCELLED'), 'Expected BOOKING_CANCELLED audit log');
+    console.log('  ✅ Passed: All audit logs recorded accurately in transaction.');
+
+    console.log('\n🏆 ALL INTEGRATION TESTS PASSED WITH 100% SUCCESS!\n');
+  } finally {
+    // Clean up test data
+    if (createdBookingIds.length > 0) {
+      console.log('🧹 Cleaning up test bookings...');
+      await db.delete(schema.bookings).where(inArray(schema.bookings.id, createdBookingIds));
+      console.log('✨ Cleaned up test records.');
+    }
+    await pool.end();
+  }
+}
+
+runTestSuite().catch((err) => {
+  console.error('❌ Test Suite Fatal Error:', err.message);
+  process.exit(1);
+});

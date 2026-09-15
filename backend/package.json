@@ -1,0 +1,46 @@
+{
+  "name": "@auditorium/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "auth:create-dev-user": "tsx src/scripts/create-dev-user.ts",
+    "auth:provision-prod-users": "tsx src/scripts/provision-prod-users.ts",
+    "test:concurrency": "tsx src/scripts/test-concurrency.ts",
+    "test:payments": "tsx src/scripts/test-payments-concurrency.ts",
+    "test:api": "tsx src/scripts/test-api-suite.ts",
+    "test:analytics": "tsx src/scripts/test-analytics.ts",
+    "test": "npm run test:concurrency && npm run test:payments && npm run test:api && npm run test:analytics"
+  },
+
+
+
+  "dependencies": {
+    "@auditorium/shared": "*",
+    "@fastify/cors": "^10.0.2",
+    "@neondatabase/serverless": "^0.10.4",
+    "better-auth": "^1.7.4",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.45.2",
+    "fastify": "^5.2.1",
+    "ws": "^8.18.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@better-auth/cli": "^1.4.22",
+    "@types/node": "^22.13.9",
+    "@types/ws": "^8.5.14",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}
