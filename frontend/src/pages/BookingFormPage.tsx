@@ -325,7 +325,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
       )}
 
       {/* Main Interactive Form */}
-      <form onSubmit={handleInitiateReview} className="space-y-6 sm:space-y-8">
+      <form onSubmit={handleInitiateReview} className="space-y-6 sm:space-y-8" autoComplete="off">
         {/* SECTION 1: Event Information */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-7 space-y-5 shadow-sm">
           <div className="border-b border-slate-100 pb-3">
@@ -339,16 +339,20 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
               <label htmlFor="event-name" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                 Event Name <span className="text-rose-500">*</span>
               </label>
-              <input
-                id="event-name"
-                type="text"
-                value={eventName}
-                onChange={(e) => setEventName(e.target.value)}
-                placeholder="e.g. Annual Tech Symposium & Gala"
-                className={`w-full px-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all ${
-                  formErrors.eventName ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-200'
-                }`}
-              />
+              <div className="relative">
+                <input
+                  id="event-name"
+                  name="eventName"
+                  type="text"
+                  autoComplete="off"
+                  value={eventName}
+                  onChange={(e) => setEventName(e.target.value)}
+                  placeholder="e.g. Annual Tech Symposium & Gala"
+                  className={`w-full px-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all ${
+                    formErrors.eventName ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-200'
+                  }`}
+                />
+              </div>
               {formErrors.eventName && (
                 <p className="text-xs text-rose-600 font-medium">{formErrors.eventName}</p>
               )}
@@ -362,7 +366,9 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
               <div className="relative">
                 <input
                   id="contact-name"
+                  name="contactName"
                   type="text"
+                  autoComplete="name"
                   value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
                   placeholder="e.g. Muhammed"
@@ -385,7 +391,9 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
               <div className="relative">
                 <input
                   id="contact-phone"
+                  name="contactPhone"
                   type="tel"
+                  autoComplete="tel"
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
                   placeholder="e.g. 9876543210"
@@ -408,6 +416,8 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
               <div className="relative">
                 <select
                   id="event-type"
+                  name="eventType"
+                  autoComplete="off"
                   value={eventType}
                   onChange={(e) => setEventType(e.target.value)}
                   className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all appearance-none cursor-pointer ${
@@ -452,7 +462,9 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
               <div className="relative">
                 <input
                   id="start-date"
+                  name="startDate"
                   type="date"
+                  autoComplete="off"
                   value={startDate}
                   onChange={(e) => {
                     setStartDate(e.target.value);
@@ -479,9 +491,11 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
               <div className="relative">
                 <input
                   id="end-date"
+                  name="endDate"
                   type="date"
-                  value={endDate}
                   min={startDate}
+                  autoComplete="off"
+                  value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all ${
                     formErrors.endDate ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-200'
@@ -645,9 +659,11 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
               <div className="relative">
                 <input
                   id="total-amount"
+                  name="totalAmount"
                   type="number"
                   min="0"
                   step="any"
+                  autoComplete="off"
                   value={totalAmount}
                   onChange={(e) => setTotalAmount(e.target.value)}
                   placeholder="0.00"
@@ -670,7 +686,9 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
               <div className="relative">
                 <textarea
                   id="notes"
+                  name="notes"
                   rows={3}
+                  autoComplete="off"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="e.g. Stage lighting requirements, mic setup, additional seating..."

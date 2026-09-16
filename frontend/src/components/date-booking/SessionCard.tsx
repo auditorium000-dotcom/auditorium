@@ -101,7 +101,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({
 
             <div className="pt-2 border-t border-slate-200 text-xs flex items-center gap-1.5 text-slate-600">
               <User className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Booked by: <strong className="text-slate-800">Auditorium Staff</strong></span>
+              <span>Booked by: <strong className="text-slate-800">{booking.creator?.name || 'Authorized Manager'}</strong></span>
             </div>
           </div>
         ) : (

@@ -258,7 +258,7 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
 
   const isConfirmed = booking.status === 'CONFIRMED';
   const isCancelled = booking.status === 'CANCELLED';
-  const creatorDisplay = booking.creator?.name || 'Auditorium Staff';
+  const creatorDisplay = booking.creator?.name || 'Authorized Manager';
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-200 pb-8">
@@ -604,7 +604,7 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
             ) : (
               <div className="space-y-2.5">
                 {payments.map((p) => {
-                  const receiverName = p.receiver?.name || 'Auditorium Staff';
+                  const receiverName = p.receiver?.name || 'Authorized Manager';
                   return (
                     <div
                       key={p.id}

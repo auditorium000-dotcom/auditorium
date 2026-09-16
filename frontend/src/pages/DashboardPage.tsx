@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Building2, LogOut, User, CalendarDays, BarChart3 } from 'lucide-react';
 import { CalendarPage } from './CalendarPage';
@@ -8,42 +8,117 @@ import { BookingFormPage } from './BookingFormPage';
 import { BookingDetailsPage } from './BookingDetailsPage';
 import { EditBookingPlaceholder } from './EditBookingPlaceholder';
 import type { SessionType } from '../types/booking';
-
-type ActiveView =
-  | { type: 'CALENDAR'; initialYear?: number; initialMonthIndex?: number }
-  | { type: 'MONTHLY_ANALYTICS' }
-  | { type: 'DATE_BOOKING'; dateKey: string }
-  | { type: 'BOOKING_FORM'; dateKey: string; session: SessionType }
-  | { type: 'BOOKING_DETAILS'; bookingId: string; returnDateKey?: string }
-  | { type: 'EDIT_BOOKING'; bookingId: string; returnDateKey?: string };
+import {
+  type ActiveView,
+  type HistoryState,
+  viewToPath,
+  pathToView,
+  isSameView,
+} from '../lib/router';
 
 export const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth();
-  const [currentView, setCurrentView] = useState<ActiveView>({ type: 'CALENDAR' });
+
+  // Initialize view from URL
+  const [currentView, setCurrentView] = useState<ActiveView>(() => {
+    if (typeof window === 'undefined') return { type: 'CALENDAR' };
+    return pathToView(window.location.pathname, window.location.search);
+  });
+
+  const currentViewRef = useRef<ActiveView>(currentView);
+  currentViewRef.current = currentView;
+
+  // Initialize browser history state and listen to popstate events (native Back/Forward/Swipe gestures)
+  useEffect(() => {
+    const currentState = window.history.state as HistoryState | null;
+    const initialView = pathToView(window.location.pathname, window.location.search);
+    const targetPath = viewToPath(initialView);
+
+    if (!currentState || !currentState.view) {
+      const state: HistoryState = { idx: 0, view: initialView };
+      window.history.replaceState(state, '', targetPath);
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      const state = event.state as HistoryState | null;
+      let nextView: ActiveView;
+      if (state && state.view) {
+        nextView = state.view;
+      } else {
+        nextView = pathToView(window.location.pathname, window.location.search);
+      }
+
+      if (!isSameView(currentViewRef.current, nextView)) {
+        setCurrentView(nextView);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  // Centralized navigation function that pushes or replaces history entries
+  const navigateTo = useCallback((view: ActiveView, options?: { replace?: boolean }) => {
+    if (isSameView(currentViewRef.current, view)) {
+      return;
+    }
+
+    const path = viewToPath(view);
+    const currentState = window.history.state as HistoryState | null;
+    const currentIdx = currentState?.idx ?? 0;
+
+    if (options?.replace) {
+      const state: HistoryState = { idx: currentIdx, view };
+      window.history.replaceState(state, '', path);
+    } else {
+      const state: HistoryState = { idx: currentIdx + 1, view };
+      window.history.pushState(state, '', path);
+    }
+
+    setCurrentView(view);
+  }, []);
+
+  // In-app back navigation: pops browser history if in-app history exists; otherwise navigates to fallback
+  const goBack = useCallback((fallbackView: ActiveView) => {
+    const currentState = window.history.state as HistoryState | null;
+    const currentIdx = currentState?.idx ?? 0;
+
+    if (currentIdx > 0) {
+      window.history.back();
+    } else {
+      navigateTo(fallbackView, { replace: true });
+    }
+  }, [navigateTo]);
 
   // Navigation handlers
   const handleSelectDate = (dateKey: string) => {
-    setCurrentView({ type: 'DATE_BOOKING', dateKey });
+    navigateTo({ type: 'DATE_BOOKING', dateKey });
   };
 
   const handleBookSession = (dateKey: string, session: SessionType) => {
-    setCurrentView({ type: 'BOOKING_FORM', dateKey, session });
+    navigateTo({ type: 'BOOKING_FORM', dateKey, session });
   };
 
   const handleViewBooking = (bookingId: string, returnDateKey?: string) => {
-    setCurrentView({ type: 'BOOKING_DETAILS', bookingId, returnDateKey });
+    navigateTo({ type: 'BOOKING_DETAILS', bookingId, returnDateKey });
   };
 
   const handleEditBooking = (bookingId: string, returnDateKey?: string) => {
-    setCurrentView({ type: 'EDIT_BOOKING', bookingId, returnDateKey });
+    navigateTo({ type: 'EDIT_BOOKING', bookingId, returnDateKey });
   };
 
   const handleBackToCalendar = (year?: number, monthIndex?: number) => {
-    setCurrentView({ type: 'CALENDAR', initialYear: year, initialMonthIndex: monthIndex });
+    if (year !== undefined && monthIndex !== undefined) {
+      navigateTo({ type: 'CALENDAR', initialYear: year, initialMonthIndex: monthIndex });
+    } else {
+      goBack({ type: 'CALENDAR' });
+    }
   };
 
   const handleBackToDateBooking = (dateKey: string) => {
-    setCurrentView({ type: 'DATE_BOOKING', dateKey });
+    goBack({ type: 'DATE_BOOKING', dateKey });
   };
 
   const isAnalyticsActive = currentView.type === 'MONTHLY_ANALYTICS';
@@ -56,7 +131,7 @@ export const DashboardPage: React.FC = () => {
           {/* Logo & System Brand */}
           <div
             className="flex items-center gap-3 cursor-pointer select-none shrink-0"
-            onClick={() => handleBackToCalendar()}
+            onClick={() => navigateTo({ type: 'CALENDAR' })}
           >
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-100 border border-indigo-500/20">
               <Building2 className="w-5 h-5" />
@@ -76,7 +151,7 @@ export const DashboardPage: React.FC = () => {
             <button
               id="nav-tab-calendar"
               type="button"
-              onClick={() => setCurrentView({ type: 'CALENDAR' })}
+              onClick={() => navigateTo({ type: 'CALENDAR' })}
               className={`inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 !isAnalyticsActive
                   ? 'bg-white text-indigo-700 shadow-xs'
@@ -89,7 +164,7 @@ export const DashboardPage: React.FC = () => {
             <button
               id="nav-tab-analytics"
               type="button"
-              onClick={() => setCurrentView({ type: 'MONTHLY_ANALYTICS' })}
+              onClick={() => navigateTo({ type: 'MONTHLY_ANALYTICS' })}
               className={`inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 isAnalyticsActive
                   ? 'bg-indigo-600 text-white shadow-xs'
@@ -164,7 +239,13 @@ export const DashboardPage: React.FC = () => {
             initialDateKey={currentView.dateKey}
             initialSession={currentView.session}
             onCancel={() => handleBackToDateBooking(currentView.dateKey)}
-            onSuccess={() => handleBackToCalendar()}
+            onSuccess={(bookingId) => {
+              // Replace the form in history with the confirmed booking details view
+              navigateTo(
+                { type: 'BOOKING_DETAILS', bookingId, returnDateKey: currentView.dateKey },
+                { replace: true }
+              );
+            }}
           />
         )}
 

@@ -128,8 +128,25 @@ export class BookingService {
           },
         });
 
+        // 4. Retrieve creator user record
+        let creator: { id: string; name: string; email: string } | null = null;
+        const [creatorUser] = await tx
+          .select({
+            id: schema.user.id,
+            name: schema.user.name,
+            email: schema.user.email,
+          })
+          .from(schema.user)
+          .where(eq(schema.user.id, userId))
+          .limit(1);
+
+        if (creatorUser) {
+          creator = creatorUser;
+        }
+
         return {
           ...newBooking,
+          creator,
           sessions: insertedSessions,
         };
       });
@@ -333,8 +350,27 @@ export class BookingService {
         .where(eq(schema.bookingSessions.bookingId, id))
         .orderBy(asc(schema.bookingSessions.bookingDate), asc(schema.bookingSessions.session));
 
+      // Query creator user info
+      let creator: { id: string; name: string; email: string } | null = null;
+      if (updated.createdBy) {
+        const [creatorUser] = await tx
+          .select({
+            id: schema.user.id,
+            name: schema.user.name,
+            email: schema.user.email,
+          })
+          .from(schema.user)
+          .where(eq(schema.user.id, updated.createdBy))
+          .limit(1);
+
+        if (creatorUser) {
+          creator = creatorUser;
+        }
+      }
+
       return {
         ...updated,
+        creator,
         sessions,
       };
     });
@@ -407,8 +443,27 @@ export class BookingService {
         .where(eq(schema.bookingSessions.bookingId, id))
         .orderBy(asc(schema.bookingSessions.bookingDate), asc(schema.bookingSessions.session));
 
+      // Query creator user info
+      let creator: { id: string; name: string; email: string } | null = null;
+      if (cancelledBooking.createdBy) {
+        const [creatorUser] = await tx
+          .select({
+            id: schema.user.id,
+            name: schema.user.name,
+            email: schema.user.email,
+          })
+          .from(schema.user)
+          .where(eq(schema.user.id, cancelledBooking.createdBy))
+          .limit(1);
+
+        if (creatorUser) {
+          creator = creatorUser;
+        }
+      }
+
       return {
         ...cancelledBooking,
+        creator,
         sessions,
       };
     });
@@ -516,8 +571,27 @@ export class BookingService {
         .where(eq(schema.bookingSessions.bookingId, bookingId))
         .orderBy(asc(schema.bookingSessions.bookingDate), asc(schema.bookingSessions.session));
 
+      // Query creator user info
+      let creator: { id: string; name: string; email: string } | null = null;
+      if (updatedBooking.createdBy) {
+        const [creatorUser] = await tx
+          .select({
+            id: schema.user.id,
+            name: schema.user.name,
+            email: schema.user.email,
+          })
+          .from(schema.user)
+          .where(eq(schema.user.id, updatedBooking.createdBy))
+          .limit(1);
+
+        if (creatorUser) {
+          creator = creatorUser;
+        }
+      }
+
       return {
         ...updatedBooking,
+        creator,
         sessions: allSessions,
       };
     });
