@@ -2,7 +2,9 @@ import type { Booking } from '../types/booking';
 import type { Payment, CreatePaymentPayload } from '../types/payment';
 import type { YearlyAnalyticsSummary } from '@auditorium/shared';
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+export const API_BASE_URL = import.meta.env.PROD
+  ? '/api'
+  : import.meta.env.VITE_API_URL || '/api';
 
 
 export interface FetchBookingsParams {
