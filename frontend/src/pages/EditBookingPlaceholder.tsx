@@ -7,7 +7,7 @@ interface EditBookingPlaceholderProps {
 }
 
 export const EditBookingPlaceholder: React.FC<EditBookingPlaceholderProps> = ({
-  bookingId,
+  bookingId: _bookingId,
   onBack,
 }) => {
   return (
@@ -22,10 +22,6 @@ export const EditBookingPlaceholder: React.FC<EditBookingPlaceholderProps> = ({
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Booking Details</span>
         </button>
-
-        <span className="text-xs font-mono text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
-          Booking #{bookingId.slice(0, 8)}
-        </span>
       </div>
 
       <div className="bg-white border border-slate-200/80 rounded-2xl p-8 text-center space-y-4 shadow-sm">

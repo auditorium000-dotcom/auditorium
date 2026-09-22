@@ -28,13 +28,13 @@ export const EventTypeDistribution: React.FC<EventTypeDistributionProps> = ({ su
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* 1. Event Types Breakdown (Spans 2 cols on desktop) */}
-      <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">
+      <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
             <Tag className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-900">Event Types Distribution</h3>
+            <h3 className="text-sm sm:text-base font-bold text-slate-900">Event Types Distribution</h3>
             <p className="text-xs text-slate-500">
               Breakdown of bookings by event categories in {summary.year}
             </p>

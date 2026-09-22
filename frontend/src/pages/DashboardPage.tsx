@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { Building2, LogOut, User, CalendarDays, BarChart3 } from 'lucide-react';
+import { LogOut, User, CalendarDays, BarChart3 } from 'lucide-react';
 import { CalendarPage } from './CalendarPage';
 import { MonthlyAnalyticsPage } from './MonthlyAnalyticsPage';
 import { DateBookingPage } from './DateBookingPage';
@@ -10,10 +10,8 @@ import { EditBookingPlaceholder } from './EditBookingPlaceholder';
 import type { SessionType } from '../types/booking';
 import {
   type ActiveView,
-  type HistoryState,
-  viewToPath,
+  navigateTo,
   pathToView,
-  isSameView,
 } from '../lib/router';
 
 export const DashboardPage: React.FC = () => {
@@ -25,32 +23,10 @@ export const DashboardPage: React.FC = () => {
     return pathToView(window.location.pathname, window.location.search);
   });
 
-  const currentViewRef = useRef<ActiveView>(currentView);
-  currentViewRef.current = currentView;
-
-  // Initialize browser history state and listen to popstate events (native Back/Forward/Swipe gestures)
+  // Listen to popstate events for backward/forward navigation
   useEffect(() => {
-    const currentState = window.history.state as HistoryState | null;
-    const initialView = pathToView(window.location.pathname, window.location.search);
-    const targetPath = viewToPath(initialView);
-
-    if (!currentState || !currentState.view) {
-      const state: HistoryState = { idx: 0, view: initialView };
-      window.history.replaceState(state, '', targetPath);
-    }
-
-    const handlePopState = (event: PopStateEvent) => {
-      const state = event.state as HistoryState | null;
-      let nextView: ActiveView;
-      if (state && state.view) {
-        nextView = state.view;
-      } else {
-        nextView = pathToView(window.location.pathname, window.location.search);
-      }
-
-      if (!isSameView(currentViewRef.current, nextView)) {
-        setCurrentView(nextView);
-      }
+    const handlePopState = () => {
+      setCurrentView(pathToView(window.location.pathname, window.location.search));
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -59,38 +35,14 @@ export const DashboardPage: React.FC = () => {
     };
   }, []);
 
-  // Centralized navigation function that pushes or replaces history entries
-  const navigateTo = useCallback((view: ActiveView, options?: { replace?: boolean }) => {
-    if (isSameView(currentViewRef.current, view)) {
-      return;
-    }
-
-    const path = viewToPath(view);
-    const currentState = window.history.state as HistoryState | null;
-    const currentIdx = currentState?.idx ?? 0;
-
-    if (options?.replace) {
-      const state: HistoryState = { idx: currentIdx, view };
-      window.history.replaceState(state, '', path);
-    } else {
-      const state: HistoryState = { idx: currentIdx + 1, view };
-      window.history.pushState(state, '', path);
-    }
-
-    setCurrentView(view);
-  }, []);
-
   // In-app back navigation: pops browser history if in-app history exists; otherwise navigates to fallback
   const goBack = useCallback((fallbackView: ActiveView) => {
-    const currentState = window.history.state as HistoryState | null;
-    const currentIdx = currentState?.idx ?? 0;
-
-    if (currentIdx > 0) {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
       window.history.back();
     } else {
       navigateTo(fallbackView, { replace: true });
     }
-  }, [navigateTo]);
+  }, []);
 
   // Navigation handlers
   const handleSelectDate = (dateKey: string) => {
@@ -127,32 +79,36 @@ export const DashboardPage: React.FC = () => {
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-indigo-500 selection:text-white">
       {/* Top Navigation Bar */}
       <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur-md sticky top-0 z-30 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-1.5 sm:gap-2">
           {/* Logo & System Brand */}
           <div
-            className="flex items-center gap-3 cursor-pointer select-none shrink-0"
+            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none shrink-0"
             onClick={() => navigateTo({ type: 'CALENDAR' })}
           >
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-100 border border-indigo-500/20">
-              <Building2 className="w-5 h-5" />
+            <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-50/90 border border-amber-200/90 shadow-xs p-1">
+              <img
+                src="/oruma-avenue-emblem.png"
+                alt="Oruma Avenue"
+                className="w-full h-full object-contain"
+              />
             </div>
-            <div className="hidden sm:block">
-              <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 leading-tight">
-                Auditorium Booking
+            <div>
+              <h1 className="text-sm sm:text-base font-bold tracking-tight text-slate-900 leading-tight">
+                Oruma Avenue
               </h1>
-              <p className="text-[11px] text-slate-500 tracking-wide font-medium">
-                Management System
+              <p className="text-[10px] sm:text-[11px] text-amber-900/80 tracking-wider font-semibold uppercase">
+                Auditorium
               </p>
             </div>
           </div>
 
           {/* Center Navigation Tabs (Calendar vs Monthly Analytics) */}
-          <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200 shadow-2xs">
+          <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200 shadow-2xs shrink-0">
             <button
               id="nav-tab-calendar"
               type="button"
               onClick={() => navigateTo({ type: 'CALENDAR' })}
-              className={`inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 !isAnalyticsActive
                   ? 'bg-white text-indigo-700 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
@@ -165,19 +121,20 @@ export const DashboardPage: React.FC = () => {
               id="nav-tab-analytics"
               type="button"
               onClick={() => navigateTo({ type: 'MONTHLY_ANALYTICS' })}
-              className={`inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 isAnalyticsActive
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
               }`}
             >
               <BarChart3 className="w-3.5 h-3.5" />
-              <span>Monthly Dashboard</span>
+              <span className="hidden sm:inline">Monthly </span>
+              <span>Dashboard</span>
             </button>
           </div>
 
           {/* Right Side: Auth User & Logout */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* Authenticated User Badge */}
             <div className="hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-100/80 border border-slate-200 text-xs">
               <div className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center">
@@ -198,7 +155,7 @@ export const DashboardPage: React.FC = () => {
               id="logout-btn"
               type="button"
               onClick={() => logout()}
-              className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 transition-all cursor-pointer shadow-2xs active:scale-95"
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 transition-all cursor-pointer shadow-2xs active:scale-95"
             >
               <LogOut className="w-3.5 h-3.5 text-slate-500" />
               <span className="hidden sm:inline">Sign Out</span>
@@ -208,7 +165,7 @@ export const DashboardPage: React.FC = () => {
       </header>
 
       {/* Main Screen Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3.5 sm:py-8">
         {currentView.type === 'CALENDAR' && (
           <CalendarPage
             onSelectDate={handleSelectDate}
@@ -240,11 +197,12 @@ export const DashboardPage: React.FC = () => {
             initialSession={currentView.session}
             onCancel={() => handleBackToDateBooking(currentView.dateKey)}
             onSuccess={(bookingId) => {
-              // Replace the form in history with the confirmed booking details view
-              navigateTo(
-                { type: 'BOOKING_DETAILS', bookingId, returnDateKey: currentView.dateKey },
-                { replace: true }
-              );
+              // Navigate to the confirmed booking details view preserving form in browser history
+              navigateTo({
+                type: 'BOOKING_DETAILS',
+                bookingId,
+                returnDateKey: currentView.dateKey,
+              });
             }}
           />
         )}

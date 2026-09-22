@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { LogIn, Lock, Mail, AlertCircle, Building2, Loader2 } from 'lucide-react';
+import { LogIn, Lock, Mail, AlertCircle, Loader2 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -46,14 +46,18 @@ export const LoginPage: React.FC = () => {
       <div className="w-full max-w-md relative z-10">
         {/* Brand / Logo Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-200 mb-4 border border-indigo-500/20">
-            <Building2 className="w-7 h-7" />
+          <div className="flex justify-center mb-4">
+            <img
+              src="/oruma-avenue-logo.png"
+              alt="Oruma Avenue"
+              className="h-16 w-auto object-contain max-w-[280px]"
+            />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-            Auditorium Portal
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+            Oruma Avenue Auditorium
           </h1>
-          <p className="mt-1.5 text-sm text-slate-500 font-medium">
-            Internal Booking Management System
+          <p className="mt-1 text-sm text-slate-500 font-medium">
+            Booking & Management Portal
           </p>
         </div>
 

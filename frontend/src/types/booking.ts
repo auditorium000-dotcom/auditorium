@@ -8,6 +8,8 @@ export interface BookingSession {
   bookingDate: string; // YYYY-MM-DD
   session: SessionType;
   status: BookingSessionStatus;
+  startTime?: string | null;
+  endTime?: string | null;
   createdAt: string;
   updatedAt: string;
 }

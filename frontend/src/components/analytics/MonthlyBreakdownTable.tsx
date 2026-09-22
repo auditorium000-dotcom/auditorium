@@ -33,9 +33,9 @@ export const MonthlyBreakdownTable: React.FC<MonthlyBreakdownTableProps> = ({
   return (
     <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       {/* Table Header / Action Bar */}
-      <div className="p-5 sm:p-6 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="p-4 sm:p-6 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h3 className="text-base sm:text-lg font-bold text-slate-900">
+          <h3 className="text-sm sm:text-lg font-bold text-slate-900">
             Monthly Breakdown & Slot Utilization
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -62,14 +62,14 @@ export const MonthlyBreakdownTable: React.FC<MonthlyBreakdownTableProps> = ({
 
       {/* Responsive Table Container */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs">
+        <table className="w-full min-w-[620px] text-left border-collapse text-xs">
           <thead>
-            <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+            <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
               <th className="py-3.5 px-4 sm:px-6">Month</th>
-              <th className="py-3.5 px-4 text-center">Total Bookings</th>
-              <th className="py-3.5 px-4 text-center">Sessions (M / E)</th>
-              <th className="py-3.5 px-4 text-right">Revenue (₹)</th>
-              <th className="py-3.5 px-4">Slot Utilization</th>
+              <th className="py-3.5 px-3 text-center">Total Bookings</th>
+              <th className="py-3.5 px-3 text-center">Sessions (M / E)</th>
+              <th className="py-3.5 px-3 text-right">Revenue (₹)</th>
+              <th className="py-3.5 px-3">Slot Utilization</th>
               <th className="py-3.5 px-4 sm:px-6 text-right">Action</th>
             </tr>
           </thead>

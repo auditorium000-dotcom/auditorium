@@ -8,6 +8,8 @@ import type {
 } from '../schemas/bookings.js';
 import { ConflictError, NotFoundError } from '../utils/errors.js';
 
+import { formatTimeTo12Hour } from '../utils/time.js';
+
 export interface BookingWithSessions {
   id: string;
   eventName: string;
@@ -31,6 +33,8 @@ export interface BookingWithSessions {
     bookingDate: string;
     session: 'MORNING' | 'EVENING';
     status: 'BOOKED' | 'CANCELLED';
+    startTime: string | null;
+    endTime: string | null;
     createdAt: Date;
     updatedAt: Date;
   }[];
@@ -105,6 +109,8 @@ export class BookingService {
           bookingDate: s.date,
           session: s.session,
           status: 'BOOKED' as const,
+          startTime: s.startTime ? formatTimeTo12Hour(s.startTime) : (s.session === 'MORNING' ? '11:00 AM' : '5:00 PM'),
+          endTime: s.endTime ? formatTimeTo12Hour(s.endTime) : (s.session === 'MORNING' ? '3:00 PM' : '9:00 PM'),
         }));
 
         const insertedSessions = await tx

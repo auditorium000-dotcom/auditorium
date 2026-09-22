@@ -46,14 +46,17 @@ export type PaymentStatus = keyof typeof PAYMENT_STATUS;
  * Common Event Types
  */
 export const EVENT_TYPES = [
-  'Wedding / Reception',
-  'Corporate Conference',
+  'Wedding Ceremony',
+  'Nikkah',
+  'Wedding Reception',
+  'Conference',
+  'Corporate Seminar',
   'Cultural Program',
-  'Musical Concert',
-  'Seminar / Workshop',
-  'Exhibition',
-  'Theatre / Play',
-  'Other',
+  'Music Concert',
+  'Exhibition / Expo',
+  'Award Function',
+  'Private Gathering',
+  'Other Event',
 ] as const;
 
-export type EventType = (typeof EVENT_TYPES)[number];
+export type EventType = (typeof EVENT_TYPES)[number] | string;

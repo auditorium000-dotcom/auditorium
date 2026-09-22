@@ -116,12 +116,12 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-payment-modal-title"
-        className="relative w-full max-w-lg bg-white border border-slate-200 rounded-2xl p-5 sm:p-7 shadow-2xl shadow-slate-900/10 space-y-6 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto"
+        className="relative w-full max-w-lg bg-white border border-slate-200 rounded-2xl p-4 sm:p-7 shadow-2xl shadow-slate-900/10 space-y-4 sm:space-y-6 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto"
       >
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -275,13 +275,13 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 sm:gap-3 pt-3 border-t border-slate-100">
             <button
               id="cancel-payment-btn"
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
             >
               Cancel
             </button>
@@ -290,7 +290,7 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
               id="submit-payment-btn"
               type="submit"
               disabled={submitting || balance <= 0}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 border border-emerald-600 transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 border border-emerald-600 transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>

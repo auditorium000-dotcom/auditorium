@@ -145,3 +145,23 @@ export function isSameView(a: ActiveView, b: ActiveView): boolean {
     }
   }
 }
+
+/**
+ * Performs real browser URL navigation so that native browser history and gestures
+ * (such as Safari/iOS swipe-back) work reliably.
+ */
+export function navigateTo(view: ActiveView, options?: { replace?: boolean }): void {
+  if (typeof window === 'undefined') return;
+
+  const currentView = pathToView(window.location.pathname, window.location.search);
+  if (isSameView(currentView, view)) {
+    return;
+  }
+
+  const path = viewToPath(view);
+  if (options?.replace) {
+    window.location.replace(path);
+  } else {
+    window.location.assign(path);
+  }
+}

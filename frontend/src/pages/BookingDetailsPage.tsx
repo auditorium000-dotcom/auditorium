@@ -20,12 +20,14 @@ import {
   CreditCard,
   PlusCircle,
   Receipt,
+  FileDown,
 } from 'lucide-react';
 import { getBookingById, cancelBooking, cancelBookingSession, getBookingPayments } from '../services/api';
 import { formatDisplayDate, formatShortDate } from '../lib/calendar';
 import { CancelBookingModal } from '../components/booking-details/CancelBookingModal';
 import { CancelSessionModal } from '../components/booking-details/CancelSessionModal';
 import { AddPaymentModal } from '../components/booking-details/AddPaymentModal';
+import { BookingConfirmationPDFModal } from '../components/booking-details/BookingConfirmationPDFModal';
 import type { Booking, BookingSession } from '../types/booking';
 import type { Payment, PaymentSummary } from '../types/payment';
 
@@ -58,6 +60,9 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
 
   // Add Payment modal state
   const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false);
+
+  // Booking Confirmation PDF modal state
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -263,30 +268,39 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
   return (
     <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-200 pb-8">
       {/* Top Navigation & Status Bar */}
-      <div className="flex items-center justify-between bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-sm">
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 bg-white border border-slate-200/80 rounded-2xl p-3.5 sm:p-5 shadow-sm">
         <button
           id="back-from-details-btn"
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all cursor-pointer shadow-sm active:scale-95"
+          className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all cursor-pointer shadow-sm active:scale-95"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back</span>
         </button>
 
-        <div className="flex items-center gap-2.5">
-          <span className="text-xs font-mono text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 hidden sm:inline">
-            #{booking.id.slice(0, 8)}
-          </span>
+        <div className="flex flex-wrap items-center gap-2 justify-end">
+          {/* Booking Confirmation PDF Action */}
+          {isConfirmed && (
+            <button
+              id="download-pdf-top-btn"
+              type="button"
+              onClick={() => setIsPdfModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-xs font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 transition-all cursor-pointer shadow-2xs active:scale-95"
+            >
+              <FileDown className="w-3.5 h-3.5 text-amber-700" />
+              <span>Confirmation PDF</span>
+            </button>
+          )}
 
           {/* Booking Status Badge */}
           {isConfirmed ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold uppercase tracking-wider shadow-sm">
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] sm:text-xs font-bold uppercase tracking-wider shadow-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <span>🟢 CONFIRMED</span>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200 text-xs font-bold uppercase tracking-wider shadow-sm">
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200 text-[11px] sm:text-xs font-bold uppercase tracking-wider shadow-sm">
               <span className="w-2 h-2 rounded-full bg-rose-500" />
               <span>🔴 CANCELLED</span>
             </span>
@@ -297,7 +311,7 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
       {/* Cancellation Notice Alert */}
       {cancellationNotice && (
         <div
-          className={`p-4 rounded-xl border flex items-center gap-3 text-sm animate-in fade-in shadow-sm ${
+          className={`p-3.5 sm:p-4 rounded-xl border flex items-center gap-3 text-sm animate-in fade-in shadow-sm ${
             cancellationNotice.startsWith('✓')
               ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
               : 'bg-rose-50 border-rose-200 text-rose-800'
@@ -308,25 +322,22 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
           ) : (
             <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
           )}
-          <p className="font-semibold">{cancellationNotice}</p>
+          <p className="font-semibold text-xs sm:text-sm">{cancellationNotice}</p>
         </div>
       )}
 
       {/* Main Details Container */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-8 shadow-sm space-y-8">
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-8 shadow-sm space-y-6 sm:space-y-8">
         {/* Header Title Section */}
-        <div className="border-b border-slate-100 pb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div className="border-b border-slate-100 pb-5 sm:pb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
           <div>
             <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md mb-2 border border-indigo-100">
               <Sparkles className="w-3.5 h-3.5" />
               <span>Booking Record</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-xl sm:text-3xl font-bold text-slate-900 tracking-tight">
               {booking.eventName}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Booking ID: <span className="font-mono text-slate-700 font-medium">{booking.id}</span>
-            </p>
           </div>
 
           <div className="sm:text-right bg-slate-50 sm:bg-transparent p-3 sm:p-0 rounded-xl border sm:border-0 border-slate-100">
@@ -342,14 +353,14 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
         {/* SECTION 1: Event & Contact Info Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* Event Information Card */}
-          <div className="p-5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-3">
+          <div className="p-4 sm:p-5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-3">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200/60 pb-2">
               <Tag className="w-4 h-4 text-indigo-600" />
               <span>EVENT INFORMATION</span>
             </div>
             <div className="space-y-2 text-xs sm:text-sm">
               <div>
-                <span className="text-slate-500 font-medium">Event Name:</span>
+                <span className="text-slate-500 font-medium">Name:</span>
                 <p className="text-sm font-bold text-slate-900 mt-0.5">{booking.eventName}</p>
               </div>
               <div>
@@ -360,7 +371,7 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
           </div>
 
           {/* Contact Information Card */}
-          <div className="p-5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-3">
+          <div className="p-4 sm:p-5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-3">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200/60 pb-2">
               <User className="w-4 h-4 text-indigo-600" />
               <span>CONTACT INFORMATION</span>
@@ -399,15 +410,15 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
               return (
                 <div
                   key={session.id}
-                  className={`p-4 rounded-xl border flex items-center justify-between transition-all ${
+                  className={`p-3.5 sm:p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
                     isSessionBooked
                       ? 'bg-slate-50 border-slate-200'
                       : 'bg-rose-50/50 border-rose-200 opacity-70'
                   }`}
                 >
-                  <div className="flex items-center gap-3.5">
+                  <div className="flex items-center gap-3">
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center border shadow-sm ${
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center border shadow-sm shrink-0 ${
                         isSessionBooked
                           ? 'bg-emerald-100/60 text-emerald-700 border-emerald-200'
                           : 'bg-rose-100/60 text-rose-700 border-rose-200'
@@ -419,22 +430,28 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
                       <h4 className="text-sm font-bold text-slate-900">
                         {formatDisplayDate(session.bookingDate)}
                       </h4>
-                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 mt-0.5">
                         <span className="font-semibold text-slate-700">
                           {isMorning ? 'Morning' : 'Evening'}
                         </span>
                         <span>•</span>
                         <div className="flex items-center gap-1">
                           <Clock className="w-3 h-3 text-slate-400" />
-                          <span>{isMorning ? '11:00 AM – 3:00 PM' : '5:00 PM – 9:00 PM'}</span>
+                          <span>
+                            {session.startTime && session.endTime
+                              ? `${session.startTime} – ${session.endTime}`
+                              : isMorning
+                              ? '11:00 AM – 3:00 PM'
+                              : '5:00 PM – 9:00 PM'}
+                          </span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div>
+                  <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto pt-2.5 sm:pt-0 border-t sm:border-t-0 border-slate-200/60">
                     {isSessionBooked ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold">
                           <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                           <span>BOOKED</span>
@@ -465,7 +482,7 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
 
         {/* SECTION 3: Notes (If provided) */}
         {booking.notes && (
-          <div className="p-5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-2">
+          <div className="p-4 sm:p-5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-2">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
               <FileText className="w-4 h-4 text-indigo-600" />
               <span>NOTES / SPECIAL REQUIREMENTS</span>
@@ -477,19 +494,19 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
         )}
 
         {/* SECTION 4: PAYMENT SUMMARY & RECORDING */}
-        <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-indigo-50/40 to-slate-50 border border-indigo-100 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
+        <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-b from-indigo-50/40 to-slate-50 border border-indigo-100 space-y-5 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-200/80 pb-4">
             <div>
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700 mb-1">
                 <Receipt className="w-4 h-4 text-emerald-600" />
                 <span>PAYMENT SUMMARY</span>
               </div>
-              <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
                 Billing & Collections
               </h3>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               {/* Payment Status Badge */}
               {paymentSummary.status === 'PAID' && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold uppercase tracking-wider shadow-sm">
@@ -522,7 +539,7 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
                   id="open-add-payment-btn"
                   type="button"
                   onClick={() => setIsAddPaymentModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 border border-emerald-600 transition-all cursor-pointer shadow-sm active:scale-95"
+                  className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 border border-emerald-600 transition-all cursor-pointer shadow-sm active:scale-95"
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>+ ADD PAYMENT</span>
@@ -608,7 +625,7 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
                   return (
                     <div
                       key={p.id}
-                      className="p-4 rounded-xl bg-white border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm shadow-sm"
+                      className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 text-xs sm:text-sm shadow-sm"
                     >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2.5">
@@ -643,13 +660,13 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
         </div>
 
         {/* SECTION 5: Booking Metadata & Audit Info */}
-        <div className="p-5 rounded-xl bg-slate-50 border border-slate-200/60 space-y-3">
+        <div className="p-4 sm:p-5 rounded-xl bg-slate-50 border border-slate-200/60 space-y-3">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200/60 pb-2">
             <History className="w-4 h-4 text-indigo-600" />
             <span>BOOKING INFORMATION</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-xs">
             <div>
               <span className="text-slate-500 font-medium">Booked By:</span>
               <p className="text-xs font-bold text-slate-800 mt-0.5 flex items-center gap-1.5">
@@ -678,7 +695,19 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
         </div>
 
         {/* Action Buttons Footer */}
-        <div className="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row items-center justify-end gap-3">
+        <div className="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3">
+          {isConfirmed && (
+            <button
+              id="download-pdf-footer-btn"
+              type="button"
+              onClick={() => setIsPdfModalOpen(true)}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 transition-all cursor-pointer shadow-xs active:scale-95"
+            >
+              <FileDown className="w-4 h-4 text-amber-700" />
+              <span>CONFIRMATION PDF</span>
+            </button>
+          )}
+
           {isConfirmed && (
             <button
               id="cancel-booking-btn"
@@ -723,6 +752,8 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
           isCancelling={isCancellingSession}
           dateKey={selectedSessionToCancel.bookingDate}
           session={selectedSessionToCancel.session}
+          startTime={selectedSessionToCancel.startTime}
+          endTime={selectedSessionToCancel.endTime}
           eventName={booking.eventName}
           onConfirm={handleConfirmCancelSession}
           onClose={() => setSelectedSessionToCancel(null)}
@@ -742,6 +773,16 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
         totalPaid={paymentSummary.totalPaid}
         balance={paymentSummary.balance}
       />
+
+      {/* Official Booking Confirmation PDF Modal */}
+      {isConfirmed && booking && (
+        <BookingConfirmationPDFModal
+          isOpen={isPdfModalOpen}
+          onClose={() => setIsPdfModalOpen(false)}
+          booking={booking}
+          payments={payments}
+        />
+      )}
     </div>
   );
 };

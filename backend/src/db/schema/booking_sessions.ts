@@ -1,4 +1,4 @@
-import { pgTable, uuid, date, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, date, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { bookings } from './bookings.js';
 import { bookingSessionEnum, bookingSessionStatusEnum } from './enums.js';
@@ -10,6 +10,8 @@ export const bookingSessions = pgTable('booking_sessions', {
   bookingDate: date('booking_date').notNull(),
   session: bookingSessionEnum('session').notNull(),
   status: bookingSessionStatusEnum('status').notNull().default('BOOKED'),
+  startTime: text('start_time'),
+  endTime: text('end_time'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({

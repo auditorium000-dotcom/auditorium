@@ -1,10 +1,11 @@
 import React from 'react';
 import { Sun, Moon, Clock, User, CalendarDays, ArrowRight, Eye, Ban } from 'lucide-react';
-import type { Booking, SessionType } from '../../types/booking';
+import type { Booking, BookingSession, SessionType } from '../../types/booking';
 
 interface SessionCardProps {
   session: SessionType;
   booking?: Booking;
+  bookedSession?: BookingSession;
   isBooked: boolean;
   onBook: (session: SessionType) => void;
   onViewBooking: (bookingId: string) => void;
@@ -14,6 +15,7 @@ interface SessionCardProps {
 export const SessionCard: React.FC<SessionCardProps> = ({
   session,
   booking,
+  bookedSession,
   isBooked,
   onBook,
   onViewBooking,
@@ -21,13 +23,16 @@ export const SessionCard: React.FC<SessionCardProps> = ({
 }) => {
   const isMorning = session === 'MORNING';
 
-  const timeLabel = isMorning ? '11:00 AM – 3:00 PM' : '5:00 PM – 9:00 PM';
+  const activeSession = bookedSession || booking?.sessions?.find(s => s.session === session && s.status === 'BOOKED');
+  const timeLabel = activeSession?.startTime && activeSession?.endTime
+    ? `${activeSession.startTime} – ${activeSession.endTime}`
+    : (isMorning ? '11:00 AM – 3:00 PM' : '5:00 PM – 9:00 PM');
   const sessionName = isMorning ? 'Morning Session' : 'Evening Session';
   const bookButtonLabel = isMorning ? 'BOOK MORNING' : 'BOOK EVENING';
 
   return (
     <div
-      className={`rounded-2xl border p-5 sm:p-7 flex flex-col justify-between transition-all duration-200 shadow-sm ${
+      className={`rounded-2xl border p-4 sm:p-7 flex flex-col justify-between transition-all duration-200 shadow-sm ${
         isBooked
           ? 'bg-white border-rose-200 shadow-rose-50'
           : 'bg-white border-slate-200/80 hover:border-emerald-300 hover:shadow-md'
@@ -35,10 +40,10 @@ export const SessionCard: React.FC<SessionCardProps> = ({
     >
       <div>
         {/* Card Header: Session Name, Icon & Time */}
-        <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex flex-wrap items-start justify-between gap-2.5 sm:gap-3 mb-4">
           <div className="flex items-center gap-3">
             <div
-              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center border shadow-sm ${
+              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center border shadow-sm shrink-0 ${
                 isBooked
                   ? 'bg-rose-50 text-rose-600 border-rose-200'
                   : 'bg-emerald-50 text-emerald-600 border-emerald-200'
@@ -57,7 +62,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({
           </div>
 
           {/* Time Badge */}
-          <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-[11px] sm:text-xs font-semibold text-slate-700">
+          <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-[11px] sm:text-xs font-semibold text-slate-700 shrink-0">
             <Clock className="w-3.5 h-3.5 text-indigo-600" />
             <span>{timeLabel}</span>
           </div>
@@ -80,10 +85,10 @@ export const SessionCard: React.FC<SessionCardProps> = ({
 
         {/* Status Content Body */}
         {isBooked && booking ? (
-          <div className="space-y-2.5 p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm">
+          <div className="space-y-2.5 p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm">
             <div>
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-                Event Name
+                Name
               </span>
               <p className="text-base font-bold text-slate-900 mt-0.5">{booking.eventName}</p>
             </div>
@@ -100,12 +105,12 @@ export const SessionCard: React.FC<SessionCardProps> = ({
             </div>
 
             <div className="pt-2 border-t border-slate-200 text-xs flex items-center gap-1.5 text-slate-600">
-              <User className="w-3.5 h-3.5 text-indigo-600" />
+              <User className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
               <span>Booked by: <strong className="text-slate-800">{booking.creator?.name || 'Authorized Manager'}</strong></span>
             </div>
           </div>
         ) : (
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm">
+          <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm">
             <p className="text-slate-800 font-semibold">
               This session is available for booking.
             </p>
@@ -119,7 +124,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({
       {/* Action Button Footer */}
       <div className="mt-5 pt-4 border-t border-slate-100">
         {isBooked && booking ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <button
               id={`view-booking-${session.toLowerCase()}-btn`}
               type="button"

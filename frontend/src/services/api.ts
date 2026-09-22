@@ -59,6 +59,8 @@ export interface CreateBookingPayload {
   sessions: {
     date: string;
     session: 'MORNING' | 'EVENING';
+    startTime?: string;
+    endTime?: string;
   }[];
 }
 

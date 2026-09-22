@@ -133,37 +133,37 @@ export const DateBookingPage: React.FC<DateBookingPageProps> = ({
   return (
     <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-200">
       {/* Navigation Top Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white border border-slate-200/80 rounded-2xl p-3.5 sm:p-5 shadow-sm">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-2 bg-white border border-slate-200/80 rounded-2xl p-3 sm:p-5 shadow-sm">
+        <div className="flex items-center gap-2">
           <button
             id="back-to-calendar-btn"
             type="button"
             onClick={onBackToCalendar}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 transition-all cursor-pointer shadow-sm active:scale-95"
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 transition-all cursor-pointer shadow-sm active:scale-95"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Calendar</span>
           </button>
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100/80 border border-slate-200 text-xs text-slate-600 font-medium self-end sm:self-auto">
-          <CalendarIcon className="w-4 h-4 text-indigo-600" />
+        <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100/80 border border-slate-200 text-xs text-slate-600 font-medium shrink-0">
+          <CalendarIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-600" />
           <span className="font-mono text-slate-800 font-semibold">{dateKey}</span>
         </div>
       </div>
 
       {/* Date Overview Card */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-8 relative overflow-hidden shadow-sm">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-8 relative overflow-hidden shadow-sm">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-600 mb-1.5">
-              <Sparkles className="w-4 h-4" />
+            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 mb-1">
+              <Sparkles className="w-3.5 h-3.5" />
               <span>Auditorium Availability</span>
             </div>
             <h2 id="selected-date-title" className="text-xl sm:text-3xl font-bold tracking-tight text-slate-900">
               {formattedDate}
             </h2>
-            <p className="text-slate-500 text-xs sm:text-sm mt-1">
+            <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
               Showing session availability and booking actions for this date.
             </p>
           </div>
@@ -171,20 +171,20 @@ export const DateBookingPage: React.FC<DateBookingPageProps> = ({
           {/* Daily Status Summary Pill */}
           <div className="self-start md:self-auto">
             {bookedCount === 0 && (
-              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold uppercase tracking-wider shadow-sm">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] sm:text-xs font-bold uppercase tracking-wider shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 <span>2 SESSIONS AVAILABLE</span>
               </span>
             )}
             {bookedCount === 1 && (
-              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold uppercase tracking-wider shadow-sm">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[11px] sm:text-xs font-bold uppercase tracking-wider shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
                 <span>1 SESSION AVAILABLE</span>
               </span>
             )}
             {bookedCount === 2 && (
-              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200 text-xs font-bold uppercase tracking-wider shadow-sm">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200 text-[11px] sm:text-xs font-bold uppercase tracking-wider shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-rose-500" />
                 <span>FULLY BOOKED</span>
               </span>
             )}
@@ -198,6 +198,7 @@ export const DateBookingPage: React.FC<DateBookingPageProps> = ({
         <SessionCard
           session="MORNING"
           booking={morningBooking}
+          bookedSession={morningSession}
           isBooked={isMorningBooked}
           onBook={(session) => onBookSession(dateKey, session)}
           onViewBooking={onViewBooking}
@@ -212,6 +213,7 @@ export const DateBookingPage: React.FC<DateBookingPageProps> = ({
         <SessionCard
           session="EVENING"
           booking={eveningBooking}
+          bookedSession={eveningSession}
           isBooked={isEveningBooked}
           onBook={(session) => onBookSession(dateKey, session)}
           onViewBooking={onViewBooking}
@@ -230,6 +232,8 @@ export const DateBookingPage: React.FC<DateBookingPageProps> = ({
           isCancelling={isCancellingSession}
           dateKey={dateKey}
           session={sessionToCancel.session.session}
+          startTime={sessionToCancel.session.startTime}
+          endTime={sessionToCancel.session.endTime}
           eventName={sessionToCancel.booking.eventName}
           onConfirm={handleConfirmCancelSlot}
           onClose={() => setSessionToCancel(null)}

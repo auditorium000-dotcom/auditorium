@@ -300,6 +300,115 @@ async function runTestSuite() {
     assert(actions.includes('BOOKING_CANCELLED'), 'Expected BOOKING_CANCELLED audit log');
     console.log('  ✅ Passed: All audit logs recorded accurately in transaction.');
 
+    // ==========================================
+    // TEST 14: Nikkah Event Type
+    // ==========================================
+    console.log('\nTest 14: Create Booking with "Nikkah" Event Type');
+    const nikkahRes = await fetch(`${BASE_URL}/bookings`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        eventName: 'Zayd & Fatima Nikkah Ceremony',
+        contactName: 'Zayd Ahmed',
+        contactPhone: '9876500001',
+        eventType: 'Nikkah',
+        totalAmount: 25000,
+        sessions: [{ date: '2099-06-02', session: 'MORNING' }],
+      }),
+    });
+    assert(nikkahRes.status === 201, `Expected 201 for Nikkah booking, got ${nikkahRes.status}`);
+    const nikkahBooking = await nikkahRes.json();
+    createdBookingIds.push(nikkahBooking.id);
+    assert(nikkahBooking.eventType === 'Nikkah', `Expected eventType to be Nikkah, got ${nikkahBooking.eventType}`);
+    console.log('  ✅ Passed: Nikkah event type persisted and returned correctly.');
+
+    // ==========================================
+    // TEST 15: Custom Event Type ("Other Event")
+    // ==========================================
+    console.log('\nTest 15: Create Booking with Custom Event Type');
+    const customTypeRes = await fetch(`${BASE_URL}/bookings`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        eventName: 'Global Robotics Championship',
+        contactName: 'Sarah Connor',
+        contactPhone: '9876500002',
+        eventType: 'Robotics Expo & Hackathon',
+        totalAmount: 40000,
+        sessions: [{ date: '2099-06-02', session: 'EVENING' }],
+      }),
+    });
+    assert(customTypeRes.status === 201, `Expected 201 for custom event type booking, got ${customTypeRes.status}`);
+    const customTypeBooking = await customTypeRes.json();
+    createdBookingIds.push(customTypeBooking.id);
+    assert(
+      customTypeBooking.eventType === 'Robotics Expo & Hackathon',
+      `Expected custom eventType, got ${customTypeBooking.eventType}`
+    );
+    console.log('  ✅ Passed: Custom event type persisted and returned correctly.');
+
+    // ==========================================
+    // TEST 16: Custom Start & End Times
+    // ==========================================
+    console.log('\nTest 16: Create Booking with Custom Start & End Times');
+    const customTimeRes = await fetch(`${BASE_URL}/bookings`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        eventName: 'Morning Executive Breakfast',
+        contactName: 'Bruce Wayne',
+        contactPhone: '9876500003',
+        eventType: 'Corporate Seminar',
+        totalAmount: 30000,
+        sessions: [
+          {
+            date: '2099-06-03',
+            session: 'MORNING',
+            startTime: '10:30 AM',
+            endTime: '2:30 PM',
+          },
+        ],
+      }),
+    });
+    assert(customTimeRes.status === 201, `Expected 201 for custom times booking, got ${customTimeRes.status}`);
+    const customTimeBooking = await customTimeRes.json();
+    createdBookingIds.push(customTimeBooking.id);
+    const sessionSlot = customTimeBooking.sessions[0];
+    assert(sessionSlot.startTime === '10:30 AM', `Expected startTime '10:30 AM', got ${sessionSlot.startTime}`);
+    assert(sessionSlot.endTime === '2:30 PM', `Expected endTime '2:30 PM', got ${sessionSlot.endTime}`);
+    console.log('  ✅ Passed: Custom start time and end time persisted and retrieved accurately.');
+
+    // ==========================================
+    // TEST 17: Time Validation - End Time <= Start Time
+    // ==========================================
+    console.log('\nTest 17: Validation Error when End Time <= Start Time');
+    const invalidTimeRes = await fetch(`${BASE_URL}/bookings`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        eventName: 'Time Paradox Meeting',
+        contactName: 'Doc Brown',
+        contactPhone: '9876500004',
+        eventType: 'Conference',
+        totalAmount: 15000,
+        sessions: [
+          {
+            date: '2099-06-04',
+            session: 'MORNING',
+            startTime: '3:00 PM',
+            endTime: '11:00 AM',
+          },
+        ],
+      }),
+    });
+    assert(invalidTimeRes.status === 400, `Expected 400 for invalid time range, got ${invalidTimeRes.status}`);
+    const invalidTimeBody = await invalidTimeRes.json();
+    assert(
+      invalidTimeBody.error === 'VALIDATION_ERROR',
+      `Expected VALIDATION_ERROR code, got ${invalidTimeBody.error}`
+    );
+    console.log('  ✅ Passed: Invalid time range (end <= start) rejected with 400 VALIDATION_ERROR.');
+
     console.log('\n🏆 ALL INTEGRATION TESTS PASSED WITH 100% SUCCESS!\n');
   } finally {
     // Clean up test data

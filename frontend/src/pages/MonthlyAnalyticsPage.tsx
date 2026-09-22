@@ -59,14 +59,14 @@ export const MonthlyAnalyticsPage: React.FC<MonthlyAnalyticsPageProps> = ({
   return (
     <div className="space-y-6">
       {/* Top Banner / Controls Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-100">
+            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-100 shrink-0">
               <TrendingUp className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">
                 Monthly Booking Dashboard
               </h1>
               <p className="text-xs sm:text-sm text-slate-500">
@@ -77,15 +77,15 @@ export const MonthlyAnalyticsPage: React.FC<MonthlyAnalyticsPageProps> = ({
         </div>
 
         {/* Right Side: Year Switcher & Refresh Button */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto">
           {/* Year Switcher */}
-          <div className="flex items-center gap-2 bg-slate-100/90 p-1 rounded-xl border border-slate-200">
-            <span className="text-xs font-semibold text-slate-500 pl-2">Year:</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-100/90 p-1 rounded-xl border border-slate-200">
+            <span className="text-xs font-semibold text-slate-500 pl-1.5 sm:pl-2">Year:</span>
             {summary?.availableYears && summary.availableYears.length > 0 ? (
               <select
                 value={selectedYear}
                 onChange={(e) => handleYearChange(parseInt(e.target.value, 10))}
-                className="bg-white text-slate-800 text-xs font-bold py-1.5 px-3 rounded-lg border border-slate-200 shadow-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                className="bg-white text-slate-800 text-xs font-bold py-1.5 px-2.5 sm:px-3 rounded-lg border border-slate-200 shadow-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
                 {summary.availableYears.map((yr) => (
                   <option key={yr} value={yr}>
@@ -100,7 +100,7 @@ export const MonthlyAnalyticsPage: React.FC<MonthlyAnalyticsPageProps> = ({
                     key={yr}
                     type="button"
                     onClick={() => handleYearChange(yr)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       selectedYear === yr
                         ? 'bg-indigo-600 text-white shadow-xs'
                         : 'text-slate-600 hover:text-slate-900 bg-white/70 hover:bg-white'
@@ -118,7 +118,7 @@ export const MonthlyAnalyticsPage: React.FC<MonthlyAnalyticsPageProps> = ({
             type="button"
             onClick={handleRefresh}
             disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 shadow-xs transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 shadow-xs transition-all cursor-pointer active:scale-95 disabled:opacity-50"
             title="Refresh analytics data"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-indigo-600' : 'text-slate-500'}`} />

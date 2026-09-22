@@ -18,6 +18,8 @@ export interface User {
 export interface SessionSlot {
   date: string; // YYYY-MM-DD
   session: SessionType; // MORNING | EVENING
+  startTime?: string;
+  endTime?: string;
 }
 
 /**

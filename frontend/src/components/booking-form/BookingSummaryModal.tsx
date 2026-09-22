@@ -33,7 +33,7 @@ interface BookingSummaryModalProps {
   endDate: string;
   totalAmount: number;
   notes: string;
-  sessions: Array<{ date: string; session: SessionType }>;
+  sessions: Array<{ date: string; session: SessionType; startTime?: string; endTime?: string }>;
 }
 
 export const BookingSummaryModal: React.FC<BookingSummaryModalProps> = ({
@@ -63,13 +63,13 @@ export const BookingSummaryModal: React.FC<BookingSummaryModalProps> = ({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
       <div
         id="booking-summary-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="booking-summary-modal-title"
-        className="relative w-full max-w-lg bg-white border border-slate-200 rounded-2xl p-5 sm:p-7 shadow-2xl shadow-slate-900/10 space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto"
+        className="relative w-full max-w-lg bg-white border border-slate-200 rounded-2xl p-4 sm:p-7 shadow-2xl shadow-slate-900/10 space-y-4 sm:space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto"
       >
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -109,7 +109,7 @@ export const BookingSummaryModal: React.FC<BookingSummaryModalProps> = ({
             <div>
               <span className="text-slate-500 font-medium flex items-center gap-1.5 mb-0.5">
                 <Tag className="w-3.5 h-3.5 text-indigo-600" />
-                Event Name
+                Name
               </span>
               <p className="text-sm font-bold text-slate-900">{eventName || '—'}</p>
             </div>
@@ -155,6 +155,11 @@ export const BookingSummaryModal: React.FC<BookingSummaryModalProps> = ({
           <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
             {sortedSessions.map((s, idx) => {
               const isMorning = s.session === 'MORNING';
+              const timeDisplay = s.startTime && s.endTime
+                ? `${s.startTime} – ${s.endTime}`
+                : isMorning
+                ? '11:00 AM – 3:00 PM'
+                : '5:00 PM – 9:00 PM';
               return (
                 <div
                   key={idx}
@@ -174,7 +179,7 @@ export const BookingSummaryModal: React.FC<BookingSummaryModalProps> = ({
                       <p className="font-bold text-slate-900">{formatDisplayDate(s.date)}</p>
                       <div className="flex items-center gap-1 text-[11px] text-slate-500">
                         <Clock className="w-3 h-3 text-slate-400" />
-                        <span>{isMorning ? 'Morning Slot (11:00 AM – 3:00 PM)' : 'Evening Slot (5:00 PM – 9:00 PM)'}</span>
+                        <span>{isMorning ? `Morning Slot (${timeDisplay})` : `Evening Slot (${timeDisplay})`}</span>
                       </div>
                     </div>
                   </div>

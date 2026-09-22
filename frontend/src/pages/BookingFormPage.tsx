@@ -17,6 +17,11 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import { formatDisplayDate, formatShortDate, getDatesInRange } from '../lib/calendar';
+import {
+  parseTimeToMinutes,
+  isEndTimeAfterStartTime,
+  formatTimeTo12Hour,
+} from '../lib/time';
 import { fetchBookings, createBooking } from '../services/api';
 import { BookingSummaryModal } from '../components/booking-form/BookingSummaryModal';
 import type { Booking, SessionType } from '../types/booking';
@@ -30,6 +35,7 @@ interface BookingFormPageProps {
 
 const EVENT_TYPE_OPTIONS = [
   'Wedding Ceremony',
+  'Nikkah',
   'Wedding Reception',
   'Conference',
   'Corporate Seminar',
@@ -50,6 +56,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
   // Form State
   const [eventName, setEventName] = useState('');
   const [eventType, setEventType] = useState(EVENT_TYPE_OPTIONS[0]);
+  const [customEventType, setCustomEventType] = useState('');
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [startDate, setStartDate] = useState(initialDateKey);
@@ -66,6 +73,11 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
       evening: initialSession === 'EVENING',
     },
   });
+
+  // Per-slot custom times map: { [`${dateKey}_${session}`]: { startTime: string, endTime: string } }
+  const [sessionCustomTimes, setSessionCustomTimes] = useState<
+    Record<string, { startTime: string; endTime: string }>
+  >({});
 
   // Async & Error State
   const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
@@ -143,31 +155,90 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
     }
   };
 
-  // Compile active selected sessions array
+  // Helper to retrieve times for a given date and session slot
+  const getSlotTimes = useCallback(
+    (d: string, session: SessionType) => {
+      const key = `${d}_${session}`;
+      const custom = sessionCustomTimes[key];
+      if (custom) return custom;
+      return session === 'MORNING'
+        ? { startTime: '11:00 AM', endTime: '3:00 PM' }
+        : { startTime: '5:00 PM', endTime: '9:00 PM' };
+    },
+    [sessionCustomTimes]
+  );
+
+  // Handle custom time input changes per slot
+  const handleTimeChange = (
+    d: string,
+    session: SessionType,
+    field: 'startTime' | 'endTime',
+    value: string
+  ) => {
+    const key = `${d}_${session}`;
+    const current = getSlotTimes(d, session);
+    const updated = {
+      ...current,
+      [field]: value,
+    };
+    setSessionCustomTimes((prev) => ({
+      ...prev,
+      [key]: updated,
+    }));
+
+    if (formErrors[`time_${d}_${session}`]) {
+      setFormErrors((prev) => {
+        const next = { ...prev };
+        delete next[`time_${d}_${session}`];
+        return next;
+      });
+    }
+  };
+
+  // Compile active selected sessions array with actual start & end times
   const activeSelectedSessions = useMemo(() => {
-    const list: { date: string; session: SessionType }[] = [];
+    const list: {
+      date: string;
+      session: SessionType;
+      startTime: string;
+      endTime: string;
+    }[] = [];
     for (const d of dateList) {
       const entry = selectedSessions[d];
       if (entry?.morning && !isSessionOccupied(d, 'MORNING')) {
-        list.push({ date: d, session: 'MORNING' });
+        const times = getSlotTimes(d, 'MORNING');
+        list.push({
+          date: d,
+          session: 'MORNING',
+          startTime: formatTimeTo12Hour(times.startTime) || times.startTime,
+          endTime: formatTimeTo12Hour(times.endTime) || times.endTime,
+        });
       }
       if (entry?.evening && !isSessionOccupied(d, 'EVENING')) {
-        list.push({ date: d, session: 'EVENING' });
+        const times = getSlotTimes(d, 'EVENING');
+        list.push({
+          date: d,
+          session: 'EVENING',
+          startTime: formatTimeTo12Hour(times.startTime) || times.startTime,
+          endTime: formatTimeTo12Hour(times.endTime) || times.endTime,
+        });
       }
     }
     return list;
-  }, [dateList, selectedSessions, isSessionOccupied]);
+  }, [dateList, selectedSessions, getSlotTimes, isSessionOccupied]);
 
   // Client-side Validation
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
     if (!eventName.trim()) {
-      errors.eventName = 'Event Name is required.';
+      errors.eventName = 'Name is required.';
     }
 
     if (!eventType.trim()) {
       errors.eventType = 'Event Type is required.';
+    } else if (eventType === 'Other Event' && !customEventType.trim()) {
+      errors.customEventType = 'Custom Event Type is required.';
     }
 
     if (!contactName.trim()) {
@@ -192,6 +263,25 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
 
     if (activeSelectedSessions.length === 0) {
       errors.sessions = 'Please select at least one available session.';
+    }
+
+    // Validate manual times for each active session
+    for (const s of activeSelectedSessions) {
+      const times = getSlotTimes(s.date, s.session);
+      const startTrim = times.startTime?.trim();
+      const endTrim = times.endTime?.trim();
+
+      if (!startTrim) {
+        errors[`time_${s.date}_${s.session}`] = 'Start time is required.';
+      } else if (!endTrim) {
+        errors[`time_${s.date}_${s.session}`] = 'End time is required.';
+      } else if (isNaN(parseTimeToMinutes(startTrim))) {
+        errors[`time_${s.date}_${s.session}`] = 'Invalid start time format (e.g. 11:00 AM).';
+      } else if (isNaN(parseTimeToMinutes(endTrim))) {
+        errors[`time_${s.date}_${s.session}`] = 'Invalid end time format (e.g. 3:00 PM).';
+      } else if (!isEndTimeAfterStartTime(startTrim, endTrim)) {
+        errors[`time_${s.date}_${s.session}`] = 'End time must be later than start time.';
+      }
     }
 
     const numAmount = Number(totalAmount);
@@ -220,11 +310,13 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
     setServerError(null);
     setSubmitting(true);
     try {
+      const finalEventType = eventType === 'Other Event' ? customEventType.trim() : eventType.trim();
+
       const payload = {
         eventName: eventName.trim(),
         contactName: contactName.trim(),
         contactPhone: contactPhone.trim(),
-        eventType: eventType.trim(),
+        eventType: finalEventType,
         totalAmount: Number(totalAmount) || 0,
         notes: notes.trim() || null,
         sessions: activeSelectedSessions,
@@ -261,41 +353,41 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
   return (
     <div className="space-y-6 sm:space-y-8 max-w-4xl mx-auto animate-in fade-in duration-200">
       {/* Top Bar with Cancel Button */}
-      <div className="flex items-center justify-between bg-white border border-slate-200/80 rounded-2xl p-3.5 sm:p-5 shadow-sm">
+      <div className="flex items-center justify-between bg-white border border-slate-200/80 rounded-2xl p-3 sm:p-5 shadow-sm">
         <button
           id="cancel-booking-top-btn"
           type="button"
           onClick={onCancel}
           disabled={submitting}
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Cancel</span>
         </button>
 
-        <span className="text-xs font-mono text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 font-medium">
+        <span className="text-xs font-mono text-slate-600 bg-slate-100 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 font-medium">
           New Booking Entry
         </span>
       </div>
 
       {/* Hero Selected Banner */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-8 shadow-sm relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-8 shadow-sm relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-600 mb-1">
-              <Sparkles className="w-4 h-4" />
+            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 mb-1">
+              <Sparkles className="w-3.5 h-3.5" />
               <span>Booking Entry</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-xl sm:text-3xl font-bold text-slate-900 tracking-tight">
               New Booking
             </h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
               Complete event information and select required session slots.
             </p>
           </div>
 
           {/* Selected Session Pill */}
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1 w-full sm:w-auto">
             <span className="text-slate-500 font-medium">Initial Selected Date:</span>
             <p className="font-bold text-slate-800">{formatDisplayDate(initialDateKey)}</p>
             <div className="flex items-center gap-1.5 text-indigo-600 font-semibold pt-0.5">
@@ -308,7 +400,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
 
       {/* Error & Success Feedback Banners */}
       {serverError && (
-        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-3 text-rose-800 text-sm animate-in fade-in">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-3 text-rose-800 text-sm animate-in fade-in">
           <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
           <div className="space-y-1">
             <p className="font-bold text-slate-900">Booking Error</p>
@@ -318,26 +410,26 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
       )}
 
       {successMessage && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-3 text-emerald-800 text-sm animate-in fade-in">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-3 text-emerald-800 text-sm animate-in fade-in">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
           <p className="font-bold text-slate-900">{successMessage}</p>
         </div>
       )}
 
       {/* Main Interactive Form */}
-      <form onSubmit={handleInitiateReview} className="space-y-6 sm:space-y-8" autoComplete="off">
+      <form onSubmit={handleInitiateReview} className="space-y-5 sm:space-y-8" autoComplete="off">
         {/* SECTION 1: Event Information */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-7 space-y-5 shadow-sm">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-7 space-y-4 sm:space-y-5 shadow-sm">
           <div className="border-b border-slate-100 pb-3">
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Event Information</h2>
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Event Information</h2>
             <p className="text-xs text-slate-500">Essential contact and event specifications</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-            {/* Event Name */}
+            {/* Name */}
             <div className="space-y-1.5 sm:col-span-2">
               <label htmlFor="event-name" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                Event Name <span className="text-rose-500">*</span>
+                Name <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -347,8 +439,8 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
                   autoComplete="off"
                   value={eventName}
                   onChange={(e) => setEventName(e.target.value)}
-                  placeholder="e.g. Annual Tech Symposium & Gala"
-                  className={`w-full px-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all ${
+                  placeholder="e.g. Annual Tech Symposium & Gala / Wedding Ceremony"
+                  className={`w-full px-3.5 sm:px-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all ${
                     formErrors.eventName ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-200'
                   }`}
                 />
@@ -372,7 +464,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
                   value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
                   placeholder="e.g. Muhammed"
-                  className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all ${
+                  className={`w-full pl-10 pr-3.5 sm:pr-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all ${
                     formErrors.contactName ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-200'
                   }`}
                 />
@@ -397,7 +489,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
                   placeholder="e.g. 9876543210"
-                  className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all ${
+                  className={`w-full pl-10 pr-3.5 sm:pr-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all ${
                     formErrors.contactPhone ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-200'
                   }`}
                 />
@@ -419,7 +511,20 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
                   name="eventType"
                   autoComplete="off"
                   value={eventType}
-                  onChange={(e) => setEventType(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEventType(val);
+                    if (val !== 'Other Event') {
+                      setCustomEventType('');
+                      if (formErrors.customEventType) {
+                        setFormErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.customEventType;
+                          return next;
+                        });
+                      }
+                    }
+                  }}
                   className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all appearance-none cursor-pointer ${
                     formErrors.eventType ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-200'
                   }`}
@@ -436,14 +541,49 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
                 <p className="text-xs text-rose-600 font-medium">{formErrors.eventType}</p>
               )}
             </div>
+
+            {/* Custom Event Type (shown immediately below when "Other Event" is selected) */}
+            {eventType === 'Other Event' && (
+              <div className="space-y-1.5 sm:col-span-2 animate-in fade-in duration-150">
+                <label htmlFor="custom-event-type" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Custom Event Type <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    id="custom-event-type"
+                    name="customEventType"
+                    type="text"
+                    autoComplete="off"
+                    value={customEventType}
+                    onChange={(e) => {
+                      setCustomEventType(e.target.value);
+                      if (formErrors.customEventType) {
+                        setFormErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.customEventType;
+                          return next;
+                        });
+                      }
+                    }}
+                    placeholder="e.g. Birthday Celebration, Community Gathering, Photo Shoot"
+                    className={`w-full px-3.5 sm:px-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all ${
+                      formErrors.customEventType ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-200'
+                    }`}
+                  />
+                </div>
+                {formErrors.customEventType && (
+                  <p className="text-xs text-rose-600 font-medium">{formErrors.customEventType}</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         {/* SECTION 2: Booking Dates */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-7 space-y-5 shadow-sm">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-7 space-y-4 sm:space-y-5 shadow-sm">
           <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-slate-900 tracking-tight">Booking Dates</h2>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Booking Dates</h2>
               <p className="text-xs text-slate-500">Single or consecutive multi-day booking range</p>
             </div>
             {dateList.length > 1 && (
@@ -472,7 +612,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
                       setEndDate(e.target.value);
                     }
                   }}
-                  className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all ${
+                  className={`w-full pl-10 pr-3.5 sm:pr-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all ${
                     formErrors.startDate ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-200'
                   }`}
                 />
@@ -497,7 +637,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
                   autoComplete="off"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all ${
+                  className={`w-full pl-10 pr-3.5 sm:pr-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all ${
                     formErrors.endDate ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-200'
                   }`}
                 />
@@ -511,10 +651,10 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
         </div>
 
         {/* SECTION 3: Per-Date Session Selection */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-7 space-y-5 shadow-sm">
-          <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-7 space-y-4 sm:space-y-5 shadow-sm">
+          <div className="border-b border-slate-100 pb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h2 className="text-lg font-bold text-slate-900 tracking-tight">Session Selection</h2>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Session Selection</h2>
               <p className="text-xs text-slate-500">Choose Morning and/or Evening sessions for each date</p>
             </div>
             {loadingAvailability && (
@@ -532,7 +672,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
           )}
 
           {/* Date by Date Session Cards */}
-          <div className="space-y-4">
+          <div className="space-y-3.5 sm:space-y-4">
             {dateList.map((d) => {
               const morningOccupied = isSessionOccupied(d, 'MORNING');
               const eveningOccupied = isSessionOccupied(d, 'EVENING');
@@ -542,21 +682,20 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
               return (
                 <div
                   key={d}
-                  className="p-4 sm:p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-3"
+                  className="p-3.5 sm:p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-3"
                 >
                   <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
                     <div className="flex items-center gap-2">
                       <CalendarDays className="w-4 h-4 text-indigo-600" />
-                      <span className="text-sm font-bold text-slate-900">{formatDisplayDate(d)}</span>
+                      <span className="text-xs sm:text-sm font-bold text-slate-900">{formatDisplayDate(d)}</span>
                     </div>
                     <span className="text-[11px] font-mono text-slate-500">{d}</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    {/* Morning Session Checkbox Option */}
-                    <label
-                      htmlFor={`session-morning-${d}`}
-                      className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer select-none ${
+                    {/* Morning Session Option */}
+                    <div
+                      className={`p-3 sm:p-3.5 rounded-xl border transition-all ${
                         morningOccupied
                           ? 'bg-rose-50/60 border-rose-200 opacity-70 cursor-not-allowed'
                           : isMorningChecked
@@ -564,41 +703,87 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
                           : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <input
-                          id={`session-morning-${d}`}
-                          type="checkbox"
-                          disabled={morningOccupied || submitting}
-                          checked={isMorningChecked}
-                          onChange={() => handleToggleSession(d, 'MORNING')}
-                          className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-white border-slate-300 cursor-pointer disabled:cursor-not-allowed"
-                        />
-                        <div>
-                          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                            <Sun className="w-3.5 h-3.5 text-amber-500" />
-                            <span>Morning Session</span>
+                      <div
+                        className="flex flex-wrap items-center justify-between gap-2 cursor-pointer select-none"
+                        onClick={() => !morningOccupied && !submitting && handleToggleSession(d, 'MORNING')}
+                      >
+                        <div className="flex items-center gap-2.5 sm:gap-3">
+                          <input
+                            id={`session-morning-${d}`}
+                            type="checkbox"
+                            disabled={morningOccupied || submitting}
+                            checked={isMorningChecked}
+                            onChange={() => handleToggleSession(d, 'MORNING')}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-white border-slate-300 cursor-pointer disabled:cursor-not-allowed shrink-0"
+                          />
+                          <div>
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                              <Sun className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                              <span>Morning Session</span>
+                            </div>
+                            <span className="text-[11px] text-slate-500">
+                              {isMorningChecked
+                                ? `${getSlotTimes(d, 'MORNING').startTime} – ${getSlotTimes(d, 'MORNING').endTime}`
+                                : 'Default: 11:00 AM – 3:00 PM'}
+                            </span>
                           </div>
-                          <span className="text-[11px] text-slate-500">11:00 AM – 3:00 PM</span>
+                        </div>
+
+                        <div>
+                          {morningOccupied ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                              🔴 BOOKED
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              🟢 AVAILABLE
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      <div>
-                        {morningOccupied ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
-                            🔴 BOOKED
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            🟢 AVAILABLE
-                          </span>
-                        )}
-                      </div>
-                    </label>
+                      {/* Editable Start/End Time Inputs when Morning is Selected */}
+                      {isMorningChecked && (
+                        <div className="mt-3 pt-3 border-t border-indigo-200/60 grid grid-cols-2 gap-2 text-xs animate-in fade-in duration-150">
+                          <div>
+                            <label htmlFor={`morning-start-${d}`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                              Start Time <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                              id={`morning-start-${d}`}
+                              type="text"
+                              value={getSlotTimes(d, 'MORNING').startTime}
+                              onChange={(e) => handleTimeChange(d, 'MORNING', 'startTime', e.target.value)}
+                              placeholder="11:00 AM"
+                              className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor={`morning-end-${d}`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                              End Time <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                              id={`morning-end-${d}`}
+                              type="text"
+                              value={getSlotTimes(d, 'MORNING').endTime}
+                              onChange={(e) => handleTimeChange(d, 'MORNING', 'endTime', e.target.value)}
+                              placeholder="3:00 PM"
+                              className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                            />
+                          </div>
+                          {formErrors[`time_${d}_MORNING`] && (
+                            <p className="col-span-2 text-[11px] text-rose-600 font-medium mt-0.5">
+                              {formErrors[`time_${d}_MORNING`]}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
-                    {/* Evening Session Checkbox Option */}
-                    <label
-                      htmlFor={`session-evening-${d}`}
-                      className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer select-none ${
+                    {/* Evening Session Option */}
+                    <div
+                      className={`p-3 sm:p-3.5 rounded-xl border transition-all ${
                         eveningOccupied
                           ? 'bg-rose-50/60 border-rose-200 opacity-70 cursor-not-allowed'
                           : isEveningChecked
@@ -606,36 +791,83 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
                           : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <input
-                          id={`session-evening-${d}`}
-                          type="checkbox"
-                          disabled={eveningOccupied || submitting}
-                          checked={isEveningChecked}
-                          onChange={() => handleToggleSession(d, 'EVENING')}
-                          className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-white border-slate-300 cursor-pointer disabled:cursor-not-allowed"
-                        />
-                        <div>
-                          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                            <Moon className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Evening Session</span>
+                      <div
+                        className="flex flex-wrap items-center justify-between gap-2 cursor-pointer select-none"
+                        onClick={() => !eveningOccupied && !submitting && handleToggleSession(d, 'EVENING')}
+                      >
+                        <div className="flex items-center gap-2.5 sm:gap-3">
+                          <input
+                            id={`session-evening-${d}`}
+                            type="checkbox"
+                            disabled={eveningOccupied || submitting}
+                            checked={isEveningChecked}
+                            onChange={() => handleToggleSession(d, 'EVENING')}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-white border-slate-300 cursor-pointer disabled:cursor-not-allowed shrink-0"
+                          />
+                          <div>
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                              <Moon className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                              <span>Evening Session</span>
+                            </div>
+                            <span className="text-[11px] text-slate-500">
+                              {isEveningChecked
+                                ? `${getSlotTimes(d, 'EVENING').startTime} – ${getSlotTimes(d, 'EVENING').endTime}`
+                                : 'Default: 5:00 PM – 9:00 PM'}
+                            </span>
                           </div>
-                          <span className="text-[11px] text-slate-500">5:00 PM – 9:00 PM</span>
+                        </div>
+
+                        <div>
+                          {eveningOccupied ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                              🔴 BOOKED
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              🟢 AVAILABLE
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      <div>
-                        {eveningOccupied ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
-                            🔴 BOOKED
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            🟢 AVAILABLE
-                          </span>
-                        )}
-                      </div>
-                    </label>
+                      {/* Editable Start/End Time Inputs when Evening is Selected */}
+                      {isEveningChecked && (
+                        <div className="mt-3 pt-3 border-t border-indigo-200/60 grid grid-cols-2 gap-2 text-xs animate-in fade-in duration-150">
+                          <div>
+                            <label htmlFor={`evening-start-${d}`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                              Start Time <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                              id={`evening-start-${d}`}
+                              type="text"
+                              value={getSlotTimes(d, 'EVENING').startTime}
+                              onChange={(e) => handleTimeChange(d, 'EVENING', 'startTime', e.target.value)}
+                              placeholder="5:00 PM"
+                              className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor={`evening-end-${d}`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                              End Time <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                              id={`evening-end-${d}`}
+                              type="text"
+                              value={getSlotTimes(d, 'EVENING').endTime}
+                              onChange={(e) => handleTimeChange(d, 'EVENING', 'endTime', e.target.value)}
+                              placeholder="9:00 PM"
+                              className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                            />
+                          </div>
+                          {formErrors[`time_${d}_EVENING`] && (
+                            <p className="col-span-2 text-[11px] text-rose-600 font-medium mt-0.5">
+                              {formErrors[`time_${d}_EVENING`]}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -644,9 +876,9 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
         </div>
 
         {/* SECTION 4: Amount & Notes */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-7 space-y-5 shadow-sm">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-7 space-y-4 sm:space-y-5 shadow-sm">
           <div className="border-b border-slate-100 pb-3">
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Amount & Notes</h2>
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Amount & Notes</h2>
             <p className="text-xs text-slate-500">Pricing and special auditorium requirements</p>
           </div>
 
@@ -701,16 +933,16 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
         </div>
 
         {/* SECTION 5: Booking Summary Card */}
-        <div className="bg-indigo-50/50 border border-indigo-200 rounded-2xl p-5 sm:p-7 space-y-4 shadow-sm">
+        <div className="bg-indigo-50/50 border border-indigo-200 rounded-2xl p-4 sm:p-7 space-y-4 shadow-sm">
           <div className="flex items-center justify-between border-b border-indigo-100 pb-3">
-            <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-indigo-600" />
               <span>Booking Summary</span>
             </h3>
             <span className="text-xs text-slate-500 font-medium">Review prior to submission</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs">
             <div>
               <span className="text-slate-500 font-medium">Event:</span>
               <p className="text-sm font-bold text-slate-900 truncate mt-0.5">
@@ -767,7 +999,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
         </div>
 
         {/* SECTION 6: Action Buttons */}
-        <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-2">
+        <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 sm:gap-3 pt-2">
           <button
             id="cancel-booking-btn"
             type="button"

@@ -29,36 +29,36 @@ export const MonthlyBarChart: React.FC<MonthlyBarChartProps> = ({
   const currentMonthNumber = new Date().getMonth() + 1;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">
+    <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-6 shadow-sm">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 sm:mb-6">
         <div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
               <BarChart3 className="w-4 h-4" />
             </div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900">
+            <h2 className="text-sm sm:text-lg font-bold text-slate-900">
               Monthly Bookings Distribution
             </h2>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 mt-0.5">
             Total bookings and session slots booked per calendar month
           </p>
         </div>
 
         {/* Legend */}
-        <div className="flex items-center flex-wrap gap-3 text-xs">
+        <div className="flex items-center flex-wrap gap-2 sm:gap-3 text-[11px] sm:text-xs">
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm bg-indigo-600 inline-block"></span>
+            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-indigo-600 inline-block shrink-0"></span>
             <span className="text-slate-600 font-medium">Total Bookings</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm bg-amber-400 inline-block"></span>
-            <span className="text-slate-600 font-medium">Morning (11am-3pm)</span>
+            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-amber-400 inline-block shrink-0"></span>
+            <span className="text-slate-600 font-medium">Morning</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm bg-indigo-400 inline-block"></span>
-            <span className="text-slate-600 font-medium">Evening (5pm-9pm)</span>
+            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-indigo-400 inline-block shrink-0"></span>
+            <span className="text-slate-600 font-medium">Evening</span>
           </div>
         </div>
       </div>

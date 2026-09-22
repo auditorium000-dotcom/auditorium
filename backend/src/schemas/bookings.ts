@@ -1,20 +1,53 @@
 import { z } from 'zod';
+import { isEndTimeAfterStartTime, parseTimeToMinutes } from '../utils/time.js';
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Validates a single booking date + session item
+ * Validates a single booking date + session item with optional custom start and end times
  */
-export const bookingSessionItemSchema = z.object({
-  date: z
-    .string()
-    .trim()
-    .regex(DATE_REGEX, 'Date must be formatted as YYYY-MM-DD')
-    .refine((val) => !isNaN(Date.parse(val)), 'Date must be a valid calendar date'),
-  session: z.enum(['MORNING', 'EVENING'], {
-    errorMap: () => ({ message: "Session must be either 'MORNING' or 'EVENING'" }),
-  }),
-});
+export const bookingSessionItemSchema = z
+  .object({
+    date: z
+      .string()
+      .trim()
+      .regex(DATE_REGEX, 'Date must be formatted as YYYY-MM-DD')
+      .refine((val) => !isNaN(Date.parse(val)), 'Date must be a valid calendar date'),
+    session: z.enum(['MORNING', 'EVENING'], {
+      errorMap: () => ({ message: "Session must be either 'MORNING' or 'EVENING'" }),
+    }),
+    startTime: z.string().trim().optional(),
+    endTime: z.string().trim().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.startTime) {
+      if (isNaN(parseTimeToMinutes(data.startTime))) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Invalid start time format',
+          path: ['startTime'],
+        });
+      }
+    }
+    if (data.endTime) {
+      if (isNaN(parseTimeToMinutes(data.endTime))) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Invalid end time format',
+          path: ['endTime'],
+        });
+      }
+    }
+    if (data.startTime && data.endTime) {
+      if (!isEndTimeAfterStartTime(data.startTime, data.endTime)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `End time (${data.endTime}) must be later than start time (${data.startTime})`,
+          path: ['endTime'],
+        });
+      }
+    }
+  });
 
 /**
  * Validates payload for creating a new booking
