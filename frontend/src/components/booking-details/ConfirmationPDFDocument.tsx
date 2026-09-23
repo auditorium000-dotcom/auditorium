@@ -128,12 +128,19 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
       <div
         ref={ref}
         id="oruma-booking-confirmation-pdf-document"
-        className="w-[794px] h-[1123px] min-h-[1123px] max-h-[1123px] bg-white text-slate-900 px-14 pt-9 pb-8 box-border relative flex flex-col justify-between select-none overflow-hidden"
+        className="w-[794px] h-[1123px] min-h-[1123px] max-h-[1123px] bg-white text-slate-900 select-none overflow-hidden"
         style={{
+          position: 'relative',
           width: '794px',
           height: '1123px',
+          minHeight: '1123px',
+          maxHeight: '1123px',
+          backgroundColor: '#ffffff',
+          color: '#0f172a',
           fontFamily: "'Plus Jakarta Sans', Arial, Helvetica, sans-serif",
           boxSizing: 'border-box',
+          overflow: 'hidden',
+          display: 'block',
           WebkitPrintColorAdjust: 'exact',
           printColorAdjust: 'exact',
         }}
@@ -176,369 +183,393 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
           }
         `}</style>
 
-        {/* TOP-LEFT CORNER GOLD RIBBON WAVE ACCENT */}
+        {/* 1. BACKGROUND DECORATIVE LAYER (NOT A FLEX CONTAINER) */}
         <div
-          className="absolute top-0 left-0 w-64 h-64 pointer-events-none z-0 overflow-hidden"
+          id="pdf-background-layer"
           style={{
             position: 'absolute',
             top: 0,
             left: 0,
-            width: '256px',
-            height: '256px',
+            width: '794px',
+            height: '1123px',
             pointerEvents: 'none',
-            zIndex: 0,
+            zIndex: 1,
             overflow: 'hidden',
           }}
         >
-          <svg viewBox="0 0 250 250" className="w-full h-full" fill="none">
-            <defs>
-              <linearGradient id="goldTopLeft" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#7a5214" />
-                <stop offset="25%" stopColor="#a8792b" />
-                <stop offset="55%" stopColor="#f5e1b5" />
-                <stop offset="80%" stopColor="#c59b27" />
-                <stop offset="100%" stopColor="#8c6221" />
-              </linearGradient>
-              <linearGradient id="goldTopLeftSubtle" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#5a3d12" />
-                <stop offset="50%" stopColor="#8c6221" />
-                <stop offset="100%" stopColor="#c59b27" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M0 0 L210 0 C160 70, 80 140, 0 210 Z"
-              fill="url(#goldTopLeft)"
-            />
-            <path
-              d="M0 0 L130 0 C100 60, 60 100, 0 130 Z"
-              fill="url(#goldTopLeftSubtle)"
-              fillOpacity="0.45"
-            />
-          </svg>
-        </div>
-
-        {/* BOTTOM-RIGHT CORNER GOLD GEOMETRIC ACCENT */}
-        <div
-          className="absolute bottom-0 right-0 w-[360px] h-[360px] pointer-events-none z-0 overflow-hidden"
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            right: 0,
-            width: '360px',
-            height: '360px',
-            pointerEvents: 'none',
-            zIndex: 0,
-            overflow: 'hidden',
-          }}
-        >
-          <svg viewBox="0 0 300 300" className="w-full h-full" fill="none">
-            <defs>
-              <linearGradient id="goldBottomRight" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#e8cf8d" />
-                <stop offset="30%" stopColor="#d4af37" />
-                <stop offset="70%" stopColor="#aa7c29" />
-                <stop offset="100%" stopColor="#7a5214" />
-              </linearGradient>
-              <linearGradient id="goldBottomRightInner" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#69430c" />
-                <stop offset="100%" stopColor="#3d2504" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M300 300 L0 300 L300 0 Z"
-              fill="url(#goldBottomRight)"
-            />
-            <path
-              d="M300 300 L130 300 L300 130 Z"
-              fill="url(#goldBottomRightInner)"
-              fillOpacity="0.8"
-            />
-          </svg>
-        </div>
-
-        {/* BACKGROUND WATERMARK EMBLEM (SCALED & POSITIONED ON RIGHT, FULLY CONTAINED) */}
-        <div
-          className="pointer-events-none select-none flex items-center justify-end"
-          style={{
-            position: 'absolute',
-            right: '16px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            pointerEvents: 'none',
-            opacity: 0.065,
-            zIndex: 0,
-            width: '520px',
-            height: '520px',
-          }}
-        >
-          <img
-            src="/oruma-avenue-emblem.png"
-            alt=""
+          {/* TOP-LEFT CORNER GOLD RIBBON WAVE ACCENT */}
+          <div
             style={{
-              width: '520px',
-              height: '520px',
-              objectFit: 'contain',
-              opacity: 0.065,
-              display: 'block',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '256px',
+              height: '256px',
+              overflow: 'hidden',
             }}
-          />
+          >
+            <svg viewBox="0 0 250 250" style={{ width: '100%', height: '100%' }} fill="none">
+              <defs>
+                <linearGradient id="goldTopLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#7a5214" />
+                  <stop offset="25%" stopColor="#a8792b" />
+                  <stop offset="55%" stopColor="#f5e1b5" />
+                  <stop offset="80%" stopColor="#c59b27" />
+                  <stop offset="100%" stopColor="#8c6221" />
+                </linearGradient>
+                <linearGradient id="goldTopLeftSubtle" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#5a3d12" />
+                  <stop offset="50%" stopColor="#8c6221" />
+                  <stop offset="100%" stopColor="#c59b27" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M0 0 L210 0 C160 70, 80 140, 0 210 Z"
+                fill="url(#goldTopLeft)"
+              />
+              <path
+                d="M0 0 L130 0 C100 60, 60 100, 0 130 Z"
+                fill="url(#goldTopLeftSubtle)"
+                fillOpacity="0.45"
+              />
+            </svg>
+          </div>
+
+          {/* BOTTOM-RIGHT CORNER GOLD GEOMETRIC ACCENT */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              right: 0,
+              width: '360px',
+              height: '360px',
+              overflow: 'hidden',
+            }}
+          >
+            <svg viewBox="0 0 300 300" style={{ width: '100%', height: '100%' }} fill="none">
+              <defs>
+                <linearGradient id="goldBottomRight" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#e8cf8d" />
+                  <stop offset="30%" stopColor="#d4af37" />
+                  <stop offset="70%" stopColor="#aa7c29" />
+                  <stop offset="100%" stopColor="#7a5214" />
+                </linearGradient>
+                <linearGradient id="goldBottomRightInner" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#69430c" />
+                  <stop offset="100%" stopColor="#3d2504" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M300 300 L0 300 L300 0 Z"
+                fill="url(#goldBottomRight)"
+              />
+              <path
+                d="M300 300 L130 300 L300 130 Z"
+                fill="url(#goldBottomRightInner)"
+                fillOpacity="0.8"
+              />
+            </svg>
+          </div>
+
+          {/* BACKGROUND WATERMARK EMBLEM (CONTAINED IN BACKGROUND LAYER) */}
+          <div
+            style={{
+              position: 'absolute',
+              right: '24px',
+              top: '320px',
+              width: '500px',
+              height: '500px',
+              opacity: 0.05,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+            }}
+          >
+            <img
+              src="/oruma-avenue-emblem.png"
+              alt=""
+              style={{
+                width: '500px',
+                height: '500px',
+                objectFit: 'contain',
+                opacity: 0.05,
+                display: 'block',
+              }}
+            />
+          </div>
         </div>
 
-        {/* 1. HEADER SECTION: Brand Logo & Title */}
-        <div className="relative z-10 text-center pt-2 px-6">
-          {/* Official Prominent Oruma Avenue Logo */}
-          <div className="flex justify-center mb-3">
-            <img
-              src="/oruma-avenue-logo.png"
-              alt="Oruma Avenue"
-              className="h-[102px] w-auto object-contain max-w-[420px]"
+        {/* 2. FOREGROUND CONTENT LAYER (FLEX COLUMN CONTAINER FOR THE 3 MAIN SECTIONS) */}
+        <div
+          id="pdf-content-layer"
+          style={{
+            position: 'relative',
+            zIndex: 10,
+            width: '794px',
+            height: '1123px',
+            boxSizing: 'border-box',
+            padding: '36px 56px 32px 56px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+          }}
+        >
+          {/* 1. HEADER SECTION: Brand Logo & Title */}
+          <div className="text-center pt-2 px-6">
+            {/* Official Prominent Oruma Avenue Logo */}
+            <div className="flex justify-center mb-3">
+              <img
+                src="/oruma-avenue-logo.png"
+                alt="Oruma Avenue"
+                className="h-[102px] w-auto object-contain max-w-[420px]"
+              />
+            </div>
+
+            {/* Subheading: AUDITORIUM */}
+            <h2
+              className="text-[15px] font-bold uppercase mt-2.5"
+              style={{
+                fontFamily: "'Cinzel', 'Playfair Display', Georgia, serif",
+                color: '#8c6221',
+                letterSpacing: '5px',
+              }}
+            >
+              AUDITORIUM
+            </h2>
+
+            {/* Title: BOOKING CONFIRMATION */}
+            <h1
+              className="text-[26px] font-extrabold uppercase mt-1"
+              style={{
+                fontFamily: "'Cinzel', 'Playfair Display', Georgia, serif",
+                color: '#3d260c',
+                letterSpacing: '3px',
+              }}
+            >
+              BOOKING CONFIRMATION
+            </h1>
+
+            {/* Gold Header Divider Line */}
+            <div
+              className="w-full h-[1.5px] mt-5 mb-6 mx-auto"
+              style={{
+                backgroundColor: '#a8792b',
+                opacity: 0.8,
+              }}
             />
           </div>
 
-          {/* Subheading: AUDITORIUM */}
-          <h2
-            className="text-[15px] font-bold uppercase mt-2.5"
-            style={{
-              fontFamily: "'Cinzel', 'Playfair Display', Georgia, serif",
-              color: '#8c6221',
-              letterSpacing: '5px',
-            }}
-          >
-            AUDITORIUM
-          </h2>
+          {/* 2. BODY SECTION: Structured Details Table */}
+          <div className="px-8 py-1 flex-1">
+            <table className="w-full border-collapse">
+              <tbody>
+                {/* Name */}
+                <tr className="pdf-table-row">
+                  <td className="pdf-label">Name</td>
+                  <td className="pdf-colon">:</td>
+                  <td className="pdf-value font-semibold text-slate-900">{booking.eventName}</td>
+                </tr>
 
-          {/* Title: BOOKING CONFIRMATION */}
-          <h1
-            className="text-[26px] font-extrabold uppercase mt-1"
-            style={{
-              fontFamily: "'Cinzel', 'Playfair Display', Georgia, serif",
-              color: '#3d260c',
-              letterSpacing: '3px',
-            }}
-          >
-            BOOKING CONFIRMATION
-          </h1>
+                {/* Event Type */}
+                <tr className="pdf-table-row">
+                  <td className="pdf-label">Event Type</td>
+                  <td className="pdf-colon">:</td>
+                  <td className="pdf-value font-medium text-slate-800">{booking.eventType}</td>
+                </tr>
 
-          {/* Gold Header Divider Line */}
-          <div
-            className="w-full h-[1.5px] mt-5 mb-6 mx-auto"
-            style={{
-              backgroundColor: '#a8792b',
-              opacity: 0.8,
-            }}
-          />
-        </div>
+                {/* Spacer Row */}
+                <tr>
+                  <td colSpan={3} className="h-5"></td>
+                </tr>
 
-        {/* 2. BODY SECTION: Structured Details Table */}
-        <div className="relative z-10 px-8 py-1 flex-1">
-          <table className="w-full border-collapse">
-            <tbody>
-              {/* Name */}
-              <tr className="pdf-table-row">
-                <td className="pdf-label">Name</td>
-                <td className="pdf-colon">:</td>
-                <td className="pdf-value font-semibold text-slate-900">{booking.eventName}</td>
-              </tr>
+                {/* Booking Date */}
+                <tr className="pdf-table-row">
+                  <td className="pdf-label">Booking Date</td>
+                  <td className="pdf-colon">:</td>
+                  <td className="pdf-value font-medium text-slate-800">{dateDisplay}</td>
+                </tr>
 
-              {/* Event Type */}
-              <tr className="pdf-table-row">
-                <td className="pdf-label">Event Type</td>
-                <td className="pdf-colon">:</td>
-                <td className="pdf-value font-medium text-slate-800">{booking.eventType}</td>
-              </tr>
+                {/* Session */}
+                <tr className="pdf-table-row">
+                  <td className="pdf-label">Session</td>
+                  <td className="pdf-colon">:</td>
+                  <td className="pdf-value font-medium text-slate-800">{sessionDisplay}</td>
+                </tr>
 
-              {/* Spacer Row */}
-              <tr>
-                <td colSpan={3} className="h-5"></td>
-              </tr>
+                {/* Time */}
+                <tr className="pdf-table-row">
+                  <td className="pdf-label">Time</td>
+                  <td className="pdf-colon">:</td>
+                  <td className="pdf-value font-medium text-slate-800">{timeDisplay}</td>
+                </tr>
 
-              {/* Booking Date */}
-              <tr className="pdf-table-row">
-                <td className="pdf-label">Booking Date</td>
-                <td className="pdf-colon">:</td>
-                <td className="pdf-value font-medium text-slate-800">{dateDisplay}</td>
-              </tr>
+                {/* Spacer Row */}
+                <tr>
+                  <td colSpan={3} className="h-5"></td>
+                </tr>
 
-              {/* Session */}
-              <tr className="pdf-table-row">
-                <td className="pdf-label">Session</td>
-                <td className="pdf-colon">:</td>
-                <td className="pdf-value font-medium text-slate-800">{sessionDisplay}</td>
-              </tr>
+                {/* Contact */}
+                <tr className="pdf-table-row">
+                  <td className="pdf-label">Contact</td>
+                  <td className="pdf-colon">:</td>
+                  <td className="pdf-value font-medium text-slate-800">{booking.contactName}</td>
+                </tr>
 
-              {/* Time */}
-              <tr className="pdf-table-row">
-                <td className="pdf-label">Time</td>
-                <td className="pdf-colon">:</td>
-                <td className="pdf-value font-medium text-slate-800">{timeDisplay}</td>
-              </tr>
+                {/* Phone */}
+                <tr className="pdf-table-row">
+                  <td className="pdf-label">Phone</td>
+                  <td className="pdf-colon">:</td>
+                  <td className="pdf-value font-medium text-slate-800 font-mono">{booking.contactPhone}</td>
+                </tr>
 
-              {/* Spacer Row */}
-              <tr>
-                <td colSpan={3} className="h-5"></td>
-              </tr>
+                {/* Spacer Row */}
+                <tr>
+                  <td colSpan={3} className="h-5"></td>
+                </tr>
 
-              {/* Contact */}
-              <tr className="pdf-table-row">
-                <td className="pdf-label">Contact</td>
-                <td className="pdf-colon">:</td>
-                <td className="pdf-value font-medium text-slate-800">{booking.contactName}</td>
-              </tr>
+                {/* Total Amount */}
+                <tr className="pdf-table-row">
+                  <td className="pdf-label">Total Amount</td>
+                  <td className="pdf-colon">:</td>
+                  <td className="pdf-value font-bold text-slate-900">
+                    <div>₹{totalAmount.toLocaleString('en-IN')}</div>
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 400,
+                        color: '#64748b',
+                        marginTop: '2px',
+                        letterSpacing: '0.01px',
+                      }}
+                    >
+                      (AC and cleaning charges are not included.)
+                    </div>
+                  </td>
+                </tr>
 
-              {/* Phone */}
-              <tr className="pdf-table-row">
-                <td className="pdf-label">Phone</td>
-                <td className="pdf-colon">:</td>
-                <td className="pdf-value font-medium text-slate-800 font-mono">{booking.contactPhone}</td>
-              </tr>
+                {/* Advance Amount (Conditionally displayed) */}
+                {advanceAmount > 0 && (
+                  <>
+                    {/* Spacer Row */}
+                    <tr>
+                      <td colSpan={3} className="h-5"></td>
+                    </tr>
 
-              {/* Spacer Row */}
-              <tr>
-                <td colSpan={3} className="h-5"></td>
-              </tr>
+                    <tr className="pdf-table-row">
+                      <td className="pdf-label">Advance Amount</td>
+                      <td className="pdf-colon">:</td>
+                      <td className="pdf-value font-bold text-slate-900">
+                        ₹{advanceAmount.toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  </>
+                )}
 
-              {/* Total Amount */}
-              <tr className="pdf-table-row">
-                <td className="pdf-label">Total Amount</td>
-                <td className="pdf-colon">:</td>
-                <td className="pdf-value font-bold text-slate-900">
-                  <div>₹{totalAmount.toLocaleString('en-IN')}</div>
-                  <div
-                    style={{
-                      fontSize: '12px',
-                      fontWeight: 400,
-                      color: '#64748b',
-                      marginTop: '2px',
-                      letterSpacing: '0.01px',
-                    }}
-                  >
-                    (AC and cleaning charges are not included.)
-                  </div>
-                </td>
-              </tr>
+                {/* Spacer Row */}
+                <tr>
+                  <td colSpan={3} className="h-5"></td>
+                </tr>
 
-              {/* Advance Amount (Conditionally displayed) */}
-              {advanceAmount > 0 && (
-                <>
-                  {/* Spacer Row */}
+                {/* Status */}
+                <tr className="pdf-table-row">
+                  <td className="pdf-label">Status</td>
+                  <td className="pdf-colon">:</td>
+                  <td className="pdf-value font-bold text-slate-900 tracking-wider">
+                    {booking.status === 'CONFIRMED' ? 'CONFIRMED' : booking.status}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* 3. FOOTER SECTION: Thank you message, Signature, and Contact bar */}
+          <div className="px-8 pt-2 space-y-4">
+            {/* Double Gold Line with Centered Thank You Message */}
+            <div className="space-y-2">
+              <div className="w-full h-[1.5px]" style={{ backgroundColor: '#a8792b', opacity: 0.8 }} />
+              <div className="py-1.5 text-center">
+                <p
+                  className="text-[15px] leading-relaxed"
+                  style={{
+                    fontFamily: "'Playfair Display', Georgia, serif",
+                    fontStyle: 'italic',
+                    color: '#262626',
+                    letterSpacing: '0.01px',
+                  }}
+                >
+                  Thank you for choosing ORUMA AVENUE.
+                  <br />
+                  We look forward to making your event special.
+                </p>
+              </div>
+              <div className="w-full h-[1.5px]" style={{ backgroundColor: '#a8792b', opacity: 0.8 }} />
+            </div>
+
+            {/* Signature Area (Date on left, Signature on right) with generous physical clearance */}
+            <div className="pt-20 pb-4">
+              <table className="w-full">
+                <tbody>
                   <tr>
-                    <td colSpan={3} className="h-5"></td>
-                  </tr>
-
-                  <tr className="pdf-table-row">
-                    <td className="pdf-label">Advance Amount</td>
-                    <td className="pdf-colon">:</td>
-                    <td className="pdf-value font-bold text-slate-900">
-                      ₹{advanceAmount.toLocaleString('en-IN')}
+                    <td style={{ width: '50%', textAlign: 'center', verticalAlign: 'bottom' }}>
+                      <div style={{ width: '190px', height: '1.5px', backgroundColor: '#64748b', margin: '0 auto' }} />
+                      <p style={{ fontSize: '13px', fontWeight: 500, color: '#334155', marginTop: '8px', letterSpacing: '0.01px' }}>
+                        Date
+                      </p>
+                    </td>
+                    <td style={{ width: '50%', textAlign: 'center', verticalAlign: 'bottom' }}>
+                      <div style={{ width: '250px', height: '1.5px', backgroundColor: '#64748b', margin: '0 auto' }} />
+                      <p style={{ fontSize: '13px', fontWeight: 500, color: '#334155', marginTop: '8px', letterSpacing: '0.01px' }}>
+                        Signature of Authorized Person
+                      </p>
                     </td>
                   </tr>
-                </>
-              )}
-
-              {/* Spacer Row */}
-              <tr>
-                <td colSpan={3} className="h-5"></td>
-              </tr>
-
-              {/* Status */}
-              <tr className="pdf-table-row">
-                <td className="pdf-label">Status</td>
-                <td className="pdf-colon">:</td>
-                <td className="pdf-value font-bold text-slate-900 tracking-wider">
-                  {booking.status === 'CONFIRMED' ? 'CONFIRMED' : booking.status}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* 3. FOOTER SECTION: Thank you message, Signature, and Contact bar */}
-        <div className="relative z-10 px-8 pt-2 space-y-4">
-          {/* Double Gold Line with Centered Thank You Message */}
-          <div className="space-y-2">
-            <div className="w-full h-[1.5px]" style={{ backgroundColor: '#a8792b', opacity: 0.8 }} />
-            <div className="py-1.5 text-center">
-              <p
-                className="text-[15px] leading-relaxed"
-                style={{
-                  fontFamily: "'Playfair Display', Georgia, serif",
-                  fontStyle: 'italic',
-                  color: '#262626',
-                  letterSpacing: '0.01px',
-                }}
-              >
-                Thank you for choosing ORUMA AVENUE.
-                <br />
-                We look forward to making your event special.
-              </p>
+                </tbody>
+              </table>
             </div>
-            <div className="w-full h-[1.5px]" style={{ backgroundColor: '#a8792b', opacity: 0.8 }} />
-          </div>
 
-          {/* Signature Area (Date on left, Signature on right) with generous physical clearance */}
-          <div className="pt-20 pb-4">
-            <table className="w-full">
-              <tbody>
-                <tr>
-                  <td style={{ width: '50%', textAlign: 'center', verticalAlign: 'bottom' }}>
-                    <div style={{ width: '190px', height: '1.5px', backgroundColor: '#64748b', margin: '0 auto' }} />
-                    <p style={{ fontSize: '13px', fontWeight: 500, color: '#334155', marginTop: '8px', letterSpacing: '0.01px' }}>
-                      Date
-                    </p>
-                  </td>
-                  <td style={{ width: '50%', textAlign: 'center', verticalAlign: 'bottom' }}>
-                    <div style={{ width: '250px', height: '1.5px', backgroundColor: '#64748b', margin: '0 auto' }} />
-                    <p style={{ fontSize: '13px', fontWeight: 500, color: '#334155', marginTop: '8px', letterSpacing: '0.01px' }}>
-                      Signature of Authorized Person
-                    </p>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* Bottom Contact Information Bar (3 Columns) */}
-          <div className="pt-3 pb-1 border-t border-amber-200/70">
-            <table className="w-full">
-              <tbody>
-                <tr>
-                  <td style={{ width: '35%', verticalAlign: 'middle', paddingRight: '10px', borderRight: '1px solid rgba(197, 155, 39, 0.6)' }}>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-[#8c6221] text-white flex items-center justify-center shrink-0 shadow-2xs">
-                        <MapPin className="w-3.5 h-3.5 fill-current text-white" />
+            {/* Bottom Contact Information Bar (3 Columns) */}
+            <div className="pt-3 pb-1 border-t border-amber-200/70">
+              <table className="w-full">
+                <tbody>
+                  <tr>
+                    <td style={{ width: '35%', verticalAlign: 'middle', paddingRight: '10px', borderRight: '1px solid rgba(197, 155, 39, 0.6)' }}>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-[#8c6221] text-white flex items-center justify-center shrink-0 shadow-2xs">
+                          <MapPin className="w-3.5 h-3.5 fill-current text-white" />
+                        </div>
+                        <div className="leading-tight">
+                          <p style={{ fontWeight: 700, color: '#0f172a', fontSize: '11px', letterSpacing: '0.01px' }}>Oruma Avenue</p>
+                          <p style={{ fontSize: '10px', color: '#475569', letterSpacing: '0.01px' }}>Kadungallur, Kizhisseri, Malappuram, Kerala</p>
+                        </div>
                       </div>
-                      <div className="leading-tight">
-                        <p style={{ fontWeight: 700, color: '#0f172a', fontSize: '11px', letterSpacing: '0.01px' }}>Oruma Avenue</p>
-                        <p style={{ fontSize: '10px', color: '#475569', letterSpacing: '0.01px' }}>Kadungallur, Kizhisseri, Malappuram, Kerala</p>
+                    </td>
+                    <td style={{ width: '36%', verticalAlign: 'middle', paddingLeft: '10px', paddingRight: '10px', borderRight: '1px solid rgba(197, 155, 39, 0.6)' }}>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-[#8c6221] text-white flex items-center justify-center shrink-0 shadow-2xs">
+                          <PhoneIcon className="w-3.5 h-3.5 fill-current text-white" />
+                        </div>
+                        <div className="leading-tight">
+                          <p style={{ fontWeight: 700, color: '#0f172a', fontSize: '11px', fontFamily: 'monospace', letterSpacing: '0.01px' }}>+91 77369 19392</p>
+                          <p style={{ fontSize: '10px', color: '#475569', letterSpacing: '0.01px' }}>orumaavenue@gmail.com</p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td style={{ width: '36%', verticalAlign: 'middle', paddingLeft: '10px', paddingRight: '10px', borderRight: '1px solid rgba(197, 155, 39, 0.6)' }}>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-[#8c6221] text-white flex items-center justify-center shrink-0 shadow-2xs">
-                        <PhoneIcon className="w-3.5 h-3.5 fill-current text-white" />
+                    </td>
+                    <td style={{ width: '29%', verticalAlign: 'middle', paddingLeft: '10px' }}>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-[#8c6221] text-white flex items-center justify-center shrink-0 shadow-2xs">
+                          <Globe className="w-3.5 h-3.5 text-white" />
+                        </div>
+                        <div className="leading-tight" style={{ transform: 'translateY(-1.5px)' }}>
+                          <p style={{ fontWeight: 600, color: '#0f172a', fontSize: '11px', letterSpacing: '0.01px' }}>
+                            www.orumaavenue.com
+                          </p>
+                        </div>
                       </div>
-                      <div className="leading-tight">
-                        <p style={{ fontWeight: 700, color: '#0f172a', fontSize: '11px', fontFamily: 'monospace', letterSpacing: '0.01px' }}>+91 77369 19392</p>
-                        <p style={{ fontSize: '10px', color: '#475569', letterSpacing: '0.01px' }}>orumaavenue@gmail.com</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ width: '29%', verticalAlign: 'middle', paddingLeft: '10px' }}>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-[#8c6221] text-white flex items-center justify-center shrink-0 shadow-2xs">
-                        <Globe className="w-3.5 h-3.5 text-white" />
-                      </div>
-                      <div className="leading-tight" style={{ transform: 'translateY(-1.5px)' }}>
-                        <p style={{ fontWeight: 600, color: '#0f172a', fontSize: '11px', letterSpacing: '0.01px' }}>
-                          www.orumaavenue.com
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

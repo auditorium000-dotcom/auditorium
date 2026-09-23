@@ -41,9 +41,7 @@ export async function generateBookingPDFBlob(
   clonedElement.style.margin = '0';
   clonedElement.style.width = '794px';
   clonedElement.style.height = '1123px';
-  clonedElement.style.display = 'flex';
-  clonedElement.style.flexDirection = 'column';
-  clonedElement.style.justifyContent = 'space-between';
+  clonedElement.style.display = 'block';
   clonedElement.style.position = 'relative';
 
   offscreenContainer.appendChild(clonedElement);
