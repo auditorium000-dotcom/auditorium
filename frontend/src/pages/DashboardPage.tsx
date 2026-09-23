@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { LogOut, User, CalendarDays, BarChart3 } from 'lucide-react';
 import { CalendarPage } from './CalendarPage';
@@ -35,15 +35,6 @@ export const DashboardPage: React.FC = () => {
     };
   }, []);
 
-  // In-app back navigation: pops browser history if in-app history exists; otherwise navigates to fallback
-  const goBack = useCallback((fallbackView: ActiveView) => {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      window.history.back();
-    } else {
-      navigateTo(fallbackView, { replace: true });
-    }
-  }, []);
-
   // Navigation handlers
   const handleSelectDate = (dateKey: string) => {
     navigateTo({ type: 'DATE_BOOKING', dateKey });
@@ -65,12 +56,12 @@ export const DashboardPage: React.FC = () => {
     if (year !== undefined && monthIndex !== undefined) {
       navigateTo({ type: 'CALENDAR', initialYear: year, initialMonthIndex: monthIndex });
     } else {
-      goBack({ type: 'CALENDAR' });
+      navigateTo({ type: 'CALENDAR' });
     }
   };
 
   const handleBackToDateBooking = (dateKey: string) => {
-    goBack({ type: 'DATE_BOOKING', dateKey });
+    navigateTo({ type: 'DATE_BOOKING', dateKey });
   };
 
   const isAnalyticsActive = currentView.type === 'MONTHLY_ANALYTICS';
@@ -185,7 +176,16 @@ export const DashboardPage: React.FC = () => {
         {currentView.type === 'DATE_BOOKING' && (
           <DateBookingPage
             dateKey={currentView.dateKey}
-            onBackToCalendar={() => handleBackToCalendar()}
+            onBackToCalendar={() => {
+              const [y, m] = currentView.dateKey.split('-');
+              const year = parseInt(y, 10);
+              const monthIndex = parseInt(m, 10) - 1;
+              if (!isNaN(year) && !isNaN(monthIndex) && monthIndex >= 0 && monthIndex <= 11) {
+                handleBackToCalendar(year, monthIndex);
+              } else {
+                handleBackToCalendar();
+              }
+            }}
             onBookSession={handleBookSession}
             onViewBooking={(bookingId) => handleViewBooking(bookingId, currentView.dateKey)}
           />
@@ -197,11 +197,12 @@ export const DashboardPage: React.FC = () => {
             initialSession={currentView.session}
             onCancel={() => handleBackToDateBooking(currentView.dateKey)}
             onSuccess={(bookingId) => {
-              // Navigate to the confirmed booking details view preserving form in browser history
+              // Navigate to the confirmed booking details view with fromCreate: true
               navigateTo({
                 type: 'BOOKING_DETAILS',
                 bookingId,
                 returnDateKey: currentView.dateKey,
+                fromCreate: true,
               });
             }}
           />
@@ -211,13 +212,37 @@ export const DashboardPage: React.FC = () => {
           <BookingDetailsPage
             bookingId={currentView.bookingId}
             onBack={() => {
-              if (currentView.returnDateKey) {
+              if (currentView.fromCreate) {
+                // If reached immediately after successful booking creation, navigate directly to Calendar
+                const [yStr, mStr] = (currentView.returnDateKey || '').split('-');
+                if (yStr && mStr) {
+                  const year = parseInt(yStr, 10);
+                  const monthIndex = parseInt(mStr, 10) - 1;
+                  if (!isNaN(year) && !isNaN(monthIndex) && monthIndex >= 0 && monthIndex <= 11) {
+                    handleBackToCalendar(year, monthIndex);
+                    return;
+                  }
+                }
+                handleBackToCalendar();
+              } else if (currentView.returnDateKey) {
+                // Otherwise retain existing behavior: return to Date Booking page
                 handleBackToDateBooking(currentView.returnDateKey);
               } else {
                 handleBackToCalendar();
               }
             }}
-            onBackToCalendar={() => handleBackToCalendar()}
+            onBackToCalendar={() => {
+              const [yStr, mStr] = (currentView.returnDateKey || '').split('-');
+              if (yStr && mStr) {
+                const year = parseInt(yStr, 10);
+                const monthIndex = parseInt(mStr, 10) - 1;
+                if (!isNaN(year) && !isNaN(monthIndex) && monthIndex >= 0 && monthIndex <= 11) {
+                  handleBackToCalendar(year, monthIndex);
+                  return;
+                }
+              }
+              handleBackToCalendar();
+            }}
             onEditBooking={(id) => handleEditBooking(id, currentView.returnDateKey)}
           />
         )}

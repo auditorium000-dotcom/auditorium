@@ -30,6 +30,16 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Sync internal year/month when navigation props change
+  useEffect(() => {
+    if (initialYear !== undefined) {
+      setCurrentYear(initialYear);
+    }
+    if (initialMonthIndex !== undefined) {
+      setCurrentMonthIndex(initialMonthIndex);
+    }
+  }, [initialYear, initialMonthIndex]);
+
   // Compute date range for current visible month grid
   const { startDate, endDate } = useMemo(() => {
     const prevMonthYear = currentMonthIndex === 0 ? currentYear - 1 : currentYear;
@@ -65,6 +75,23 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({
 
   useEffect(() => {
     loadBookings();
+  }, [loadBookings]);
+
+  // Refetch when tab becomes active or restored from BFCache
+  useEffect(() => {
+    const handleRefresh = () => {
+      loadBookings();
+    };
+
+    window.addEventListener('pageshow', handleRefresh);
+    window.addEventListener('focus', handleRefresh);
+    document.addEventListener('visibilitychange', handleRefresh);
+
+    return () => {
+      window.removeEventListener('pageshow', handleRefresh);
+      window.removeEventListener('focus', handleRefresh);
+      document.removeEventListener('visibilitychange', handleRefresh);
+    };
   }, [loadBookings]);
 
   // Navigation handlers

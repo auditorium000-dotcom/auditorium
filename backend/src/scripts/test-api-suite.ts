@@ -1,21 +1,16 @@
-import fs from 'fs';
-import { eq, inArray } from 'drizzle-orm';
+import dotenv from 'dotenv';
+import { eq, inArray, gte } from 'drizzle-orm';
 import { db, pool } from '../db/index.js';
 import * as schema from '../db/schema/index.js';
 
-// Parse credentials from backend/.env safely
-const envPath = 'c:/Users/RUFAID/OneDrive/Desktop/auditorium/backend/.env';
-const envContent = fs.readFileSync(envPath, 'utf8');
-let email = '', password = '';
-for (const line of envContent.split('\n')) {
-  if (line.startsWith('DEV_USER_EMAIL=')) email = line.split('=')[1].trim().replace(/['"]/g, '');
-  if (line.startsWith('DEV_USER_PASSWORD=')) password = line.split('=')[1].trim().replace(/['"]/g, '');
-}
+dotenv.config({ path: 'c:/Users/RUFAID/OneDrive/Desktop/auditorium/backend/.env' });
+const email = process.env.DEV_USER_EMAIL || 'admin@auditorium.local';
+const password = process.env.DEV_USER_PASSWORD || '';
 
 const BASE_URL = 'http://127.0.0.1:5000/api';
 const createdBookingIds: string[] = [];
 
-async function assert(condition: boolean, message: string) {
+function assert(condition: boolean, message: string): void {
   if (!condition) {
     throw new Error(`Assertion failed: ${message}`);
   }
@@ -28,9 +23,9 @@ async function runTestSuite() {
   const testSessions = await db
     .select({ bookingId: schema.bookingSessions.bookingId })
     .from(schema.bookingSessions)
-    .where(eq(schema.bookingSessions.bookingDate, '2099-06-01'));
+    .where(gte(schema.bookingSessions.bookingDate, '2099-01-01'));
   if (testSessions.length > 0) {
-    const ids = testSessions.map((s) => s.bookingId);
+    const ids = Array.from(new Set(testSessions.map((s) => s.bookingId)));
     await db.delete(schema.bookings).where(inArray(schema.bookings.id, ids));
   }
 
@@ -63,6 +58,10 @@ async function runTestSuite() {
       },
       body: JSON.stringify({ email, password }),
     });
+    if (loginRes.status !== 200) {
+      const errBody = await loginRes.text();
+      console.error('Login failed body:', errBody, 'credentials:', { email, passwordLength: password.length });
+    }
     assert(loginRes.status === 200, `Login should succeed, got ${loginRes.status}`);
     const cookieHeaders = loginRes.headers.getSetCookie?.() || [loginRes.headers.get('set-cookie')].filter(Boolean);
     const sessionCookie = cookieHeaders.map((c) => c.split(';')[0]).join('; ');

@@ -24,14 +24,18 @@ export async function fetchBookings(params?: FetchBookingsParams): Promise<Booki
   if (params?.endDate) query.set('endDate', params.endDate);
   if (params?.status) query.set('status', params.status);
   if (params?.search) query.set('search', params.search);
+  query.set('_t', Date.now().toString());
 
-  const url = `${API_BASE_URL}/bookings${query.toString() ? `?${query.toString()}` : ''}`;
+  const url = `${API_BASE_URL}/bookings?${query.toString()}`;
 
   const response = await fetch(url, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
     },
+    cache: 'no-store',
     credentials: 'include',
   });
 
@@ -104,11 +108,14 @@ export async function createBooking(payload: CreateBookingPayload): Promise<Book
  * Retrieves a single booking by ID via GET /api/bookings/:id.
  */
 export async function getBookingById(id: string): Promise<Booking> {
-  const response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
+  const response = await fetch(`${API_BASE_URL}/bookings/${encodeURIComponent(id)}?_t=${Date.now()}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
     },
+    cache: 'no-store',
     credentials: 'include',
   });
 
@@ -208,11 +215,14 @@ export async function cancelBookingSession(
  * Retrieves all payments for a booking via GET /api/bookings/:id/payments.
  */
 export async function getBookingPayments(bookingId: string): Promise<Payment[]> {
-  const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/payments`, {
+  const response = await fetch(`${API_BASE_URL}/bookings/${encodeURIComponent(bookingId)}/payments?_t=${Date.now()}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
     },
+    cache: 'no-store',
     credentials: 'include',
   });
 
@@ -280,14 +290,18 @@ export async function createPayment(
 export async function fetchMonthlyAnalytics(year?: number): Promise<YearlyAnalyticsSummary> {
   const query = new URLSearchParams();
   if (year) query.set('year', year.toString());
+  query.set('_t', Date.now().toString());
 
-  const url = `${API_BASE_URL}/analytics/monthly${query.toString() ? `?${query.toString()}` : ''}`;
+  const url = `${API_BASE_URL}/analytics/monthly?${query.toString()}`;
 
   const response = await fetch(url, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
     },
+    cache: 'no-store',
     credentials: 'include',
   });
 

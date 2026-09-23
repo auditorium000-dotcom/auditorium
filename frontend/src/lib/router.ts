@@ -5,7 +5,7 @@ export type ActiveView =
   | { type: 'MONTHLY_ANALYTICS' }
   | { type: 'DATE_BOOKING'; dateKey: string }
   | { type: 'BOOKING_FORM'; dateKey: string; session: SessionType }
-  | { type: 'BOOKING_DETAILS'; bookingId: string; returnDateKey?: string }
+  | { type: 'BOOKING_DETAILS'; bookingId: string; returnDateKey?: string; fromCreate?: boolean }
   | { type: 'EDIT_BOOKING'; bookingId: string; returnDateKey?: string };
 
 export interface HistoryState {
@@ -31,7 +31,15 @@ export function viewToPath(view: ActiveView): string {
     case 'BOOKING_FORM':
       return `/book/${encodeURIComponent(view.dateKey)}/${encodeURIComponent(view.session)}`;
     case 'BOOKING_DETAILS': {
-      const search = view.returnDateKey ? `?returnDateKey=${encodeURIComponent(view.returnDateKey)}` : '';
+      const params = new URLSearchParams();
+      if (view.returnDateKey) {
+        params.set('returnDateKey', view.returnDateKey);
+      }
+      if (view.fromCreate) {
+        params.set('fromCreate', 'true');
+      }
+      const queryStr = params.toString();
+      const search = queryStr ? `?${queryStr}` : '';
       return `/bookings/${encodeURIComponent(view.bookingId)}${search}`;
     }
     case 'EDIT_BOOKING': {
@@ -104,10 +112,12 @@ export function pathToView(pathname: string, search: string): ActiveView {
   const bookingMatch = normalizedPath.match(/^\/bookings\/([^/]+)$/);
   if (bookingMatch) {
     const returnDateKey = searchParams.get('returnDateKey') || undefined;
+    const fromCreate = searchParams.get('fromCreate') === 'true';
     return {
       type: 'BOOKING_DETAILS',
       bookingId: decodeURIComponent(bookingMatch[1]),
       returnDateKey: returnDateKey && /^\d{4}-\d{2}-\d{2}$/.test(returnDateKey) ? returnDateKey : undefined,
+      fromCreate: fromCreate || undefined,
     };
   }
 
@@ -137,7 +147,11 @@ export function isSameView(a: ActiveView, b: ActiveView): boolean {
     }
     case 'BOOKING_DETAILS': {
       const bDetails = b as Extract<ActiveView, { type: 'BOOKING_DETAILS' }>;
-      return a.bookingId === bDetails.bookingId && a.returnDateKey === bDetails.returnDateKey;
+      return (
+        a.bookingId === bDetails.bookingId &&
+        a.returnDateKey === bDetails.returnDateKey &&
+        a.fromCreate === bDetails.fromCreate
+      );
     }
     case 'EDIT_BOOKING': {
       const bEdit = b as Extract<ActiveView, { type: 'EDIT_BOOKING' }>;
@@ -147,8 +161,7 @@ export function isSameView(a: ActiveView, b: ActiveView): boolean {
 }
 
 /**
- * Performs real browser URL navigation so that native browser history and gestures
- * (such as Safari/iOS swipe-back) work reliably.
+ * Performs real browser URL navigation and dispatches popstate for client routing.
  */
 export function navigateTo(view: ActiveView, options?: { replace?: boolean }): void {
   if (typeof window === 'undefined') return;
@@ -160,8 +173,9 @@ export function navigateTo(view: ActiveView, options?: { replace?: boolean }): v
 
   const path = viewToPath(view);
   if (options?.replace) {
-    window.location.replace(path);
+    window.history.replaceState(null, '', path);
   } else {
-    window.location.assign(path);
+    window.history.pushState(null, '', path);
   }
+  window.dispatchEvent(new PopStateEvent('popstate'));
 }
