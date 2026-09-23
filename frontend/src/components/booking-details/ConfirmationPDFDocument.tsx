@@ -203,8 +203,8 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
               position: 'absolute',
               top: 0,
               left: 0,
-              width: '360px',
-              height: '360px',
+              width: '240px',
+              height: '240px',
               overflow: 'hidden',
             }}
           >
@@ -239,8 +239,8 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
               position: 'absolute',
               bottom: 0,
               right: 0,
-              width: '360px',
-              height: '360px',
+              width: '235px',
+              height: '235px',
               overflow: 'hidden',
             }}
           >
@@ -553,12 +553,25 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
                       </div>
                     </td>
                     <td style={{ width: '29%', verticalAlign: 'middle', paddingLeft: '10px' }}>
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-[#8c6221] text-white flex items-center justify-center shrink-0 shadow-2xs">
-                          <Globe className="w-3.5 h-3.5 text-white" />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div
+                          style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            backgroundColor: '#8c6221',
+                            color: '#ffffff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                          }}
+                        >
+                          <Globe style={{ width: '14px', height: '14px', color: '#ffffff' }} />
                         </div>
-                        <div className="leading-tight" style={{ transform: 'translateY(-1.5px)' }}>
-                          <p style={{ fontWeight: 600, color: '#0f172a', fontSize: '11px', letterSpacing: '0.01px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', transform: 'translateY(-2.5px)' }}>
+                          <p style={{ fontWeight: 600, color: '#0f172a', fontSize: '11px', letterSpacing: '0.01px', margin: 0, lineHeight: 1 }}>
                             www.orumaavenue.com
                           </p>
                         </div>
