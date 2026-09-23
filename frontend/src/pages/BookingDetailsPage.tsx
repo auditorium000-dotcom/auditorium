@@ -297,12 +297,12 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
           {isConfirmed ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] sm:text-xs font-bold uppercase tracking-wider shadow-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>🟢 CONFIRMED</span>
+              <span>CONFIRMED</span>
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200 text-[11px] sm:text-xs font-bold uppercase tracking-wider shadow-sm">
               <span className="w-2 h-2 rounded-full bg-rose-500" />
-              <span>🔴 CANCELLED</span>
+              <span>CANCELLED</span>
             </span>
           )}
         </div>
@@ -511,25 +511,25 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
               {paymentSummary.status === 'PAID' && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold uppercase tracking-wider shadow-sm">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span>🟢 PAID</span>
+                  <span>PAID</span>
                 </span>
               )}
               {paymentSummary.status === 'PARTIALLY_PAID' && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold uppercase tracking-wider shadow-sm">
                   <span className="w-2 h-2 rounded-full bg-amber-400" />
-                  <span>🟡 PARTIALLY PAID</span>
+                  <span>PARTIALLY PAID</span>
                 </span>
               )}
               {paymentSummary.status === 'UNPAID' && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200 text-xs font-bold uppercase tracking-wider shadow-sm">
                   <span className="w-2 h-2 rounded-full bg-rose-500" />
-                  <span>🔴 UNPAID</span>
+                  <span>UNPAID</span>
                 </span>
               )}
               {paymentSummary.status === 'CANCELLED' && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300 text-xs font-bold uppercase tracking-wider shadow-sm">
                   <span className="w-2 h-2 rounded-full bg-slate-400" />
-                  <span>🔴 VOID / CANCELLED</span>
+                  <span>VOID / CANCELLED</span>
                 </span>
               )}
 

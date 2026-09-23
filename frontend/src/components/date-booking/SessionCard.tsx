@@ -71,14 +71,14 @@ export const SessionCard: React.FC<SessionCardProps> = ({
         {/* Status Indicator */}
         <div className="mb-4">
           {isBooked ? (
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 text-rose-800 border border-rose-200 text-xs font-bold uppercase tracking-wider">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-800 border border-rose-200 text-xs font-bold uppercase tracking-wider">
               <span className="w-2 h-2 rounded-full bg-rose-500" />
-              <span>🔴 BOOKED</span>
+              <span>BOOKED</span>
             </div>
           ) : (
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold uppercase tracking-wider">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold uppercase tracking-wider">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>🟢 AVAILABLE</span>
+              <span>AVAILABLE</span>
             </div>
           )}
         </div>

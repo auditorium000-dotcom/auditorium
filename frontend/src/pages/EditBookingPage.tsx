@@ -587,15 +587,21 @@ export const EditBookingPage: React.FC<EditBookingPageProps> = ({
 
             {/* Contact Name */}
             <div className="space-y-1.5">
-              <label htmlFor="contact-name" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+              <label htmlFor="aud-edit-contact-person-entry" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                 Contact Name <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <input
-                  id="contact-name"
-                  name="contactPerson"
+                  id="aud-edit-contact-person-entry"
+                  name="aud_fld_edit_contact_person"
                   type="text"
-                  autoComplete="new-password"
+                  readOnly
+                  onFocus={(e) => e.currentTarget.removeAttribute('readonly')}
+                  onPointerDown={(e) => e.currentTarget.removeAttribute('readonly')}
+                  autoComplete="off"
+                  data-form-type="other"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
                   value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
                   placeholder="e.g. Muhammed"
@@ -612,16 +618,21 @@ export const EditBookingPage: React.FC<EditBookingPageProps> = ({
 
             {/* Contact Phone */}
             <div className="space-y-1.5">
-              <label htmlFor="contact-phone" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+              <label htmlFor="aud-edit-contact-digits-entry" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                 Contact Phone <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <input
-                  id="contact-phone"
-                  name="bookingContactNumber"
+                  id="aud-edit-contact-digits-entry"
+                  name="aud_fld_edit_contact_digits"
                   type="text"
-                  inputMode="tel"
-                  autoComplete="new-password"
+                  readOnly
+                  onFocus={(e) => e.currentTarget.removeAttribute('readonly')}
+                  onPointerDown={(e) => e.currentTarget.removeAttribute('readonly')}
+                  autoComplete="off"
+                  data-form-type="other"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
                   placeholder="e.g. 9876543210"
