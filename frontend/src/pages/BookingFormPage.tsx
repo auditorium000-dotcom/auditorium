@@ -467,7 +467,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
               <div className="relative">
                 <input
                   id="contact-name"
-                  name="contactPerson"
+                  name="bookingContactPerson"
                   type="text"
                   autoComplete="new-password"
                   value={contactName}
