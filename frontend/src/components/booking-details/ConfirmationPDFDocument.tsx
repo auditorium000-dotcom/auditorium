@@ -127,8 +127,10 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
       <div
         ref={ref}
         id="oruma-booking-confirmation-pdf-document"
-        className="w-[794px] min-h-[1123px] max-h-[1123px] bg-white text-slate-900 px-14 pt-9 pb-8 box-border relative flex flex-col justify-between select-none overflow-hidden"
+        className="w-[794px] h-[1123px] min-h-[1123px] max-h-[1123px] bg-white text-slate-900 px-14 pt-9 pb-8 box-border relative flex flex-col justify-between select-none overflow-hidden"
         style={{
+          width: '794px',
+          height: '1123px',
           fontFamily: "'Plus Jakarta Sans', Arial, Helvetica, sans-serif",
           boxSizing: 'border-box',
           WebkitPrintColorAdjust: 'exact',
@@ -230,12 +232,12 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
           </svg>
         </div>
 
-        {/* BACKGROUND EXACT WATERMARK EMBLEM */}
-        <div className="absolute -right-16 top-[55%] -translate-y-1/2 pointer-events-none opacity-[0.065] z-0 overflow-hidden select-none">
+        {/* BACKGROUND EXACT WATERMARK EMBLEM (CENTERED, NEVER CUT OFF) */}
+        <div className="absolute left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-[0.065] z-0 select-none flex items-center justify-center">
           <img
             src="/oruma-avenue-emblem.png"
             alt=""
-            className="w-[540px] h-[540px] object-contain max-w-none"
+            className="w-[450px] h-[450px] object-contain"
           />
         </div>
 
@@ -357,7 +359,18 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
                 <td className="pdf-label">Total Amount</td>
                 <td className="pdf-colon">:</td>
                 <td className="pdf-value font-bold text-slate-900">
-                  ₹{totalAmount.toLocaleString('en-IN')}
+                  <div>₹{totalAmount.toLocaleString('en-IN')}</div>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 400,
+                      color: '#64748b',
+                      marginTop: '2px',
+                      letterSpacing: '0.01px',
+                    }}
+                  >
+                    (AC and cleaning charges are not included.)
+                  </div>
                 </td>
               </tr>
 

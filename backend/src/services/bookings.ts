@@ -304,82 +304,125 @@ export class BookingService {
   }
 
   /**
-   * Updates basic booking details and records an audit log.
+   * Updates booking details (and optionally replaces booking session slots) and records an audit log.
+   * Enforces database-level concurrency protection via idx_booking_sessions_unique_active.
    */
   async updateBooking(
     id: string,
     data: UpdateBookingInput,
     userId: string
   ): Promise<BookingWithSessions> {
-    return await db.transaction(async (tx) => {
-      const [existing] = await tx
-        .select()
-        .from(schema.bookings)
-        .where(eq(schema.bookings.id, id))
-        .limit(1);
-
-      if (!existing) {
-        throw new NotFoundError(`Booking with ID '${id}' not found`, 'BOOKING_NOT_FOUND');
-      }
-
-      const updateData: Partial<typeof schema.bookings.$inferInsert> = {
-        updatedAt: new Date(),
-      };
-
-      if (data.eventName !== undefined) updateData.eventName = data.eventName;
-      if (data.contactName !== undefined) updateData.contactName = data.contactName;
-      if (data.contactPhone !== undefined) updateData.contactPhone = data.contactPhone;
-      if (data.eventType !== undefined) updateData.eventType = data.eventType;
-      if (data.totalAmount !== undefined) updateData.totalAmount = data.totalAmount.toFixed(2);
-      if (data.notes !== undefined) updateData.notes = data.notes;
-
-      const [updated] = await tx
-        .update(schema.bookings)
-        .set(updateData)
-        .where(eq(schema.bookings.id, id))
-        .returning();
-
-      // Record audit log
-      await tx.insert(schema.auditLogs).values({
-        userId,
-        action: 'BOOKING_UPDATED',
-        bookingId: id,
-        details: {
-          updatedFields: Object.keys(data),
-          changes: data,
-        },
-      });
-
-      const sessions = await tx
-        .select()
-        .from(schema.bookingSessions)
-        .where(eq(schema.bookingSessions.bookingId, id))
-        .orderBy(asc(schema.bookingSessions.bookingDate), asc(schema.bookingSessions.session));
-
-      // Query creator user info
-      let creator: { id: string; name: string; email: string } | null = null;
-      if (updated.createdBy) {
-        const [creatorUser] = await tx
-          .select({
-            id: schema.user.id,
-            name: schema.user.name,
-            email: schema.user.email,
-          })
-          .from(schema.user)
-          .where(eq(schema.user.id, updated.createdBy))
+    try {
+      return await db.transaction(async (tx) => {
+        const [existing] = await tx
+          .select()
+          .from(schema.bookings)
+          .where(eq(schema.bookings.id, id))
           .limit(1);
 
-        if (creatorUser) {
-          creator = creatorUser;
+        if (!existing) {
+          throw new NotFoundError(`Booking with ID '${id}' not found`, 'BOOKING_NOT_FOUND');
         }
-      }
 
-      return {
-        ...updated,
-        creator,
-        sessions,
-      };
-    });
+        if (existing.status === 'CANCELLED') {
+          throw new ConflictError('Cannot edit a cancelled booking.', 'BOOKING_CANCELLED');
+        }
+
+        const updateData: Partial<typeof schema.bookings.$inferInsert> = {
+          updatedAt: new Date(),
+        };
+
+        if (data.eventName !== undefined) updateData.eventName = data.eventName;
+        if (data.contactName !== undefined) updateData.contactName = data.contactName;
+        if (data.contactPhone !== undefined) updateData.contactPhone = data.contactPhone;
+        if (data.eventType !== undefined) updateData.eventType = data.eventType;
+        if (data.totalAmount !== undefined) updateData.totalAmount = data.totalAmount.toFixed(2);
+        if (data.notes !== undefined) updateData.notes = data.notes;
+
+        const [updated] = await tx
+          .update(schema.bookings)
+          .set(updateData)
+          .where(eq(schema.bookings.id, id))
+          .returning();
+
+        // If sessions are provided, replace existing session slots atomically
+        if (data.sessions !== undefined && data.sessions.length > 0) {
+          // 1. Remove existing sessions for this booking
+          await tx
+            .delete(schema.bookingSessions)
+            .where(eq(schema.bookingSessions.bookingId, id));
+
+          // 2. Insert new requested sessions
+          const sessionsPayload = data.sessions.map((s) => ({
+            bookingId: id,
+            bookingDate: s.date,
+            session: s.session,
+            status: 'BOOKED' as const,
+            startTime: s.startTime
+              ? formatTimeTo12Hour(s.startTime)
+              : s.session === 'MORNING'
+              ? '11:00 AM'
+              : '5:00 PM',
+            endTime: s.endTime
+              ? formatTimeTo12Hour(s.endTime)
+              : s.session === 'MORNING'
+              ? '3:00 PM'
+              : '9:00 PM',
+          }));
+
+          await tx.insert(schema.bookingSessions).values(sessionsPayload);
+        }
+
+        // Record audit log
+        await tx.insert(schema.auditLogs).values({
+          userId,
+          action: 'BOOKING_UPDATED',
+          bookingId: id,
+          details: {
+            updatedFields: Object.keys(data),
+            changes: data,
+          },
+        });
+
+        const sessions = await tx
+          .select()
+          .from(schema.bookingSessions)
+          .where(eq(schema.bookingSessions.bookingId, id))
+          .orderBy(asc(schema.bookingSessions.bookingDate), asc(schema.bookingSessions.session));
+
+        // Query creator user info
+        let creator: { id: string; name: string; email: string } | null = null;
+        if (updated.createdBy) {
+          const [creatorUser] = await tx
+            .select({
+              id: schema.user.id,
+              name: schema.user.name,
+              email: schema.user.email,
+            })
+            .from(schema.user)
+            .where(eq(schema.user.id, updated.createdBy))
+            .limit(1);
+
+          if (creatorUser) {
+            creator = creatorUser;
+          }
+        }
+
+        return {
+          ...updated,
+          creator,
+          sessions,
+        };
+      });
+    } catch (err: unknown) {
+      if (isUniqueConstraintViolation(err)) {
+        throw new ConflictError(
+          'One or more requested auditorium sessions are already booked.',
+          'BOOKING_CONFLICT'
+        );
+      }
+      throw err;
+    }
   }
 
   /**

@@ -34,6 +34,10 @@ interface BookingSummaryModalProps {
   totalAmount: number;
   notes: string;
   sessions: Array<{ date: string; session: SessionType; startTime?: string; endTime?: string }>;
+  title?: string;
+  subtitle?: string;
+  confirmButtonText?: string;
+  submittingButtonText?: string;
 }
 
 export const BookingSummaryModal: React.FC<BookingSummaryModalProps> = ({
@@ -51,6 +55,10 @@ export const BookingSummaryModal: React.FC<BookingSummaryModalProps> = ({
   totalAmount,
   notes,
   sessions,
+  title = 'Booking Summary',
+  subtitle = 'Please review before confirming this booking',
+  confirmButtonText = 'Confirm Booking',
+  submittingButtonText = 'Confirming Booking...',
 }) => {
   if (!isOpen) return null;
 
@@ -79,9 +87,9 @@ export const BookingSummaryModal: React.FC<BookingSummaryModalProps> = ({
             </div>
             <div>
               <h3 id="booking-summary-modal-title" className="text-lg font-bold text-slate-900 tracking-tight">
-                Booking Summary
+                {title}
               </h3>
-              <p className="text-xs text-slate-500">Please review before confirming this booking</p>
+              <p className="text-xs text-slate-500">{subtitle}</p>
             </div>
           </div>
 
@@ -241,12 +249,12 @@ export const BookingSummaryModal: React.FC<BookingSummaryModalProps> = ({
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Confirming Booking...</span>
+                <span>{submittingButtonText}</span>
               </>
             ) : (
               <>
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Confirm Booking</span>
+                <span>{confirmButtonText}</span>
               </>
             )}
           </button>

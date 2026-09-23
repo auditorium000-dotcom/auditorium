@@ -406,7 +406,94 @@ async function runTestSuite() {
       invalidTimeBody.error === 'VALIDATION_ERROR',
       `Expected VALIDATION_ERROR code, got ${invalidTimeBody.error}`
     );
-    console.log('  ✅ Passed: Invalid time range (end <= start) rejected with 400 VALIDATION_ERROR.');
+    // ==========================================
+    // TEST 18: Update Booking with Sessions & Custom Times
+    // ==========================================
+    console.log('\nTest 18: Edit Booking with Sessions & Custom Times (PATCH)');
+    const editBookingRes = await fetch(`${BASE_URL}/bookings/${customTimeBooking.id}`, {
+      method: 'PATCH',
+      headers: authHeaders,
+      body: JSON.stringify({
+        eventName: 'Morning Executive Breakfast (Rescheduled)',
+        contactName: 'Bruce Thomas Wayne',
+        contactPhone: '9876599999',
+        eventType: 'Other Event - Executive Gala',
+        totalAmount: 45000,
+        notes: 'Rescheduled to evening slot with custom times',
+        sessions: [
+          {
+            date: '2099-06-05',
+            session: 'EVENING',
+            startTime: '6:00 PM',
+            endTime: '10:30 PM',
+          },
+        ],
+      }),
+    });
+    assert(editBookingRes.status === 200, `Expected 200 on edit booking with sessions, got ${editBookingRes.status}`);
+    const editedBooking = await editBookingRes.json();
+    assert(editedBooking.eventName === 'Morning Executive Breakfast (Rescheduled)', 'Expected updated eventName');
+    assert(editedBooking.contactName === 'Bruce Thomas Wayne', 'Expected updated contactName');
+    assert(editedBooking.contactPhone === '9876599999', 'Expected updated contactPhone');
+    assert(editedBooking.eventType === 'Other Event - Executive Gala', 'Expected updated eventType');
+    assert(editedBooking.totalAmount === '45000.00', 'Expected updated totalAmount');
+    assert(editedBooking.notes === 'Rescheduled to evening slot with custom times', 'Expected updated notes');
+    assert(editedBooking.sessions.length === 1, 'Expected 1 active session');
+    assert(editedBooking.sessions[0].bookingDate === '2099-06-05', 'Expected session date 2099-06-05');
+    assert(editedBooking.sessions[0].session === 'EVENING', 'Expected session EVENING');
+    assert(editedBooking.sessions[0].startTime === '6:00 PM', 'Expected startTime 6:00 PM');
+    assert(editedBooking.sessions[0].endTime === '10:30 PM', 'Expected endTime 10:30 PM');
+    console.log('  ✅ Passed: Booking details and sessions updated and persisted accurately.');
+
+    // ==========================================
+    // TEST 19: Edit Booking Slot Conflict Prevention & Rollback
+    // ==========================================
+    console.log('\nTest 19: Edit Booking Slot Conflict (Attempt reschedule to occupied slot)');
+    // customTimeBooking is on 2099-06-05 EVENING. Create another booking on 2099-06-06 MORNING.
+    const anotherBookingRes = await fetch(`${BASE_URL}/bookings`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        eventName: 'Existing Occupant Booking',
+        contactName: 'Clark Kent',
+        contactPhone: '9876500005',
+        eventType: 'Exhibition / Expo',
+        totalAmount: 25000,
+        sessions: [
+          {
+            date: '2099-06-06',
+            session: 'MORNING',
+          },
+        ],
+      }),
+    });
+    assert(anotherBookingRes.status === 201, `Expected 201 for another booking, got ${anotherBookingRes.status}`);
+    const anotherBooking = await anotherBookingRes.json();
+    createdBookingIds.push(anotherBooking.id);
+
+    // Try to update customTimeBooking to also book 2099-06-06 MORNING (conflict!)
+    const conflictEditRes = await fetch(`${BASE_URL}/bookings/${customTimeBooking.id}`, {
+      method: 'PATCH',
+      headers: authHeaders,
+      body: JSON.stringify({
+        sessions: [
+          {
+            date: '2099-06-06',
+            session: 'MORNING',
+          },
+        ],
+      }),
+    });
+    assert(conflictEditRes.status === 409, `Expected 409 on conflicting session edit, got ${conflictEditRes.status}`);
+    const editConflictBody = await conflictEditRes.json();
+    assert(editConflictBody.error === 'BOOKING_CONFLICT', `Expected BOOKING_CONFLICT error, got ${editConflictBody.error}`);
+
+    // Verify customTimeBooking sessions were NOT corrupted/lost
+    const verifyBookingRes = await fetch(`${BASE_URL}/bookings/${customTimeBooking.id}`, { headers: authHeaders });
+    const verifyBookingData = await verifyBookingRes.json();
+    assert(verifyBookingData.sessions.length === 1, 'Original session must be preserved intact');
+    assert(verifyBookingData.sessions[0].bookingDate === '2099-06-05', 'Original session date 2099-06-05 preserved');
+    console.log('  ✅ Passed: Edit conflict rejected with 409 and original booking sessions preserved intact.');
 
     console.log('\n🏆 ALL INTEGRATION TESTS PASSED WITH 100% SUCCESS!\n');
   } finally {

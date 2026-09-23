@@ -30,9 +30,9 @@ export async function generateBookingPDFBlob(
   offscreenContainer.style.left = '-99999px';
   offscreenContainer.style.top = '0';
   offscreenContainer.style.width = '794px';
-  offscreenContainer.style.minHeight = '1123px';
+  offscreenContainer.style.height = '1123px';
   offscreenContainer.style.zIndex = '-9999';
-  offscreenContainer.style.overflow = 'visible';
+  offscreenContainer.style.overflow = 'hidden';
   offscreenContainer.style.transform = 'none';
   offscreenContainer.style.opacity = '1';
   offscreenContainer.style.pointerEvents = 'none';
@@ -40,11 +40,27 @@ export async function generateBookingPDFBlob(
   const clonedElement = element.cloneNode(true) as HTMLElement;
   clonedElement.style.transform = 'none';
   clonedElement.style.margin = '0';
-  clonedElement.style.display = 'block';
+  clonedElement.style.width = '794px';
+  clonedElement.style.height = '1123px';
+  clonedElement.style.display = 'flex';
+  clonedElement.style.flexDirection = 'column';
+  clonedElement.style.justifyContent = 'space-between';
   clonedElement.style.position = 'relative';
 
   offscreenContainer.appendChild(clonedElement);
   document.body.appendChild(offscreenContainer);
+
+  // Wait for all images inside cloned element to finish loading
+  const images = Array.from(clonedElement.querySelectorAll('img'));
+  await Promise.all(
+    images.map((img) => {
+      if (img.complete) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+      });
+    })
+  );
 
   try {
     // 3. Capture high-resolution canvas without any parent transform distortion

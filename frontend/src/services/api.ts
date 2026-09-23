@@ -139,6 +139,56 @@ export async function getBookingById(id: string): Promise<Booking> {
   return response.json();
 }
 
+export interface UpdateBookingPayload {
+  eventName?: string;
+  contactName?: string;
+  contactPhone?: string;
+  eventType?: string;
+  totalAmount?: number;
+  notes?: string | null;
+  sessions?: {
+    date: string;
+    session: 'MORNING' | 'EVENING';
+    startTime?: string;
+    endTime?: string;
+  }[];
+}
+
+/**
+ * Updates an existing booking via PATCH /api/bookings/:id.
+ */
+export async function updateBooking(id: string, payload: UpdateBookingPayload): Promise<Booking> {
+  const response = await fetch(`${API_BASE_URL}/bookings/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    let errorData: { error?: string; message?: string; details?: Record<string, string[]> } = {};
+    try {
+      errorData = await response.json();
+    } catch {
+      // Ignored
+    }
+
+    const err = new Error(errorData.message || 'Failed to update booking') as Error & {
+      status: number;
+      code?: string;
+      details?: Record<string, string[]>;
+    };
+    err.status = response.status;
+    err.code = errorData.error;
+    err.details = errorData.details;
+    throw err;
+  }
+
+  return response.json();
+}
+
 /**
  * Cancels a confirmed booking via POST /api/bookings/:id/cancel.
  */

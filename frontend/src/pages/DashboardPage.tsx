@@ -6,7 +6,7 @@ import { MonthlyAnalyticsPage } from './MonthlyAnalyticsPage';
 import { DateBookingPage } from './DateBookingPage';
 import { BookingFormPage } from './BookingFormPage';
 import { BookingDetailsPage } from './BookingDetailsPage';
-import { EditBookingPlaceholder } from './EditBookingPlaceholder';
+import { EditBookingPage } from './EditBookingPage';
 import type { SessionType } from '../types/booking';
 import {
   type ActiveView,
@@ -248,9 +248,10 @@ export const DashboardPage: React.FC = () => {
         )}
 
         {currentView.type === 'EDIT_BOOKING' && (
-          <EditBookingPlaceholder
+          <EditBookingPage
             bookingId={currentView.bookingId}
-            onBack={() => handleViewBooking(currentView.bookingId, currentView.returnDateKey)}
+            onCancel={() => handleViewBooking(currentView.bookingId, currentView.returnDateKey)}
+            onSuccess={() => handleViewBooking(currentView.bookingId, currentView.returnDateKey)}
           />
         )}
       </main>

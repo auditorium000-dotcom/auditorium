@@ -83,7 +83,7 @@ export const createBookingSchema = z.object({
 });
 
 /**
- * Validates payload for updating basic booking details
+ * Validates payload for updating booking details and session slots
  */
 export const updateBookingSchema = z
   .object({
@@ -98,6 +98,24 @@ export const updateBookingSchema = z
     eventType: z.string().trim().min(1, 'Event type cannot be empty').optional(),
     totalAmount: z.coerce.number().min(0, 'Total amount must be non-negative').optional(),
     notes: z.string().trim().nullable().optional(),
+    sessions: z
+      .array(bookingSessionItemSchema)
+      .min(1, 'At least one booking session is required')
+      .superRefine((sessions, ctx) => {
+        const seenSlots = new Set<string>();
+        for (let i = 0; i < sessions.length; i++) {
+          const slotKey = `${sessions[i].date}_${sessions[i].session}`;
+          if (seenSlots.has(slotKey)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Duplicate slot found in request: ${sessions[i].date} (${sessions[i].session})`,
+              path: [i],
+            });
+          }
+          seenSlots.add(slotKey);
+        }
+      })
+      .optional(),
   })
   .refine(
     (data) => Object.keys(data).length > 0,

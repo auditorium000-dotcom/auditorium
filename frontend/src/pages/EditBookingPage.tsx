@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ArrowLeft,
   Calendar,
-  Clock,
   Sun,
   Moon,
   User,
@@ -15,22 +14,22 @@ import {
   Loader2,
   Sparkles,
   CalendarDays,
+  Edit3,
 } from 'lucide-react';
-import { formatDisplayDate, formatShortDate, getDatesInRange } from '../lib/calendar';
+import { formatDisplayDate, getDatesInRange } from '../lib/calendar';
 import {
   parseTimeToMinutes,
   isEndTimeAfterStartTime,
   formatTimeTo12Hour,
 } from '../lib/time';
-import { fetchBookings, createBooking } from '../services/api';
+import { fetchBookings, getBookingById, updateBooking, type UpdateBookingPayload } from '../services/api';
 import { BookingSummaryModal } from '../components/booking-form/BookingSummaryModal';
 import type { Booking, SessionType } from '../types/booking';
 
-interface BookingFormPageProps {
-  initialDateKey: string;
-  initialSession: SessionType;
+interface EditBookingPageProps {
+  bookingId: string;
   onCancel: () => void;
-  onSuccess: (bookingId: string) => void;
+  onSuccess: () => void;
 }
 
 const EVENT_TYPE_OPTIONS = [
@@ -47,32 +46,31 @@ const EVENT_TYPE_OPTIONS = [
   'Other Event',
 ];
 
-export const BookingFormPage: React.FC<BookingFormPageProps> = ({
-  initialDateKey,
-  initialSession,
+export const EditBookingPage: React.FC<EditBookingPageProps> = ({
+  bookingId,
   onCancel,
   onSuccess,
 }) => {
+  // Initial Loading & Fetch State
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [initialError, setInitialError] = useState<string | null>(null);
+  const [originalBooking, setOriginalBooking] = useState<Booking | null>(null);
+
   // Form State
   const [eventName, setEventName] = useState('');
   const [eventType, setEventType] = useState(EVENT_TYPE_OPTIONS[0]);
   const [customEventType, setCustomEventType] = useState('');
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
-  const [startDate, setStartDate] = useState(initialDateKey);
-  const [endDate, setEndDate] = useState(initialDateKey);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [totalAmount, setTotalAmount] = useState<string>('0');
   const [notes, setNotes] = useState('');
 
   // Per-date sessions map: { [dateKey]: { morning: boolean, evening: boolean } }
   const [selectedSessions, setSelectedSessions] = useState<
     Record<string, { morning: boolean; evening: boolean }>
-  >({
-    [initialDateKey]: {
-      morning: initialSession === 'MORNING',
-      evening: initialSession === 'EVENING',
-    },
-  });
+  >({});
 
   // Per-slot custom times map: { [`${dateKey}_${session}`]: { startTime: string, endTime: string } }
   const [sessionCustomTimes, setSessionCustomTimes] = useState<
@@ -88,8 +86,85 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
 
+  // 1. Fetch initial booking details on mount
+  useEffect(() => {
+    let isMounted = true;
+    const loadOriginal = async () => {
+      setInitialLoading(true);
+      setInitialError(null);
+      try {
+        const data = await getBookingById(bookingId);
+        if (!isMounted) return;
+
+        setOriginalBooking(data);
+        setEventName(data.eventName || '');
+        setContactName(data.contactName || '');
+        setContactPhone(data.contactPhone || '');
+        setTotalAmount(data.totalAmount ? String(Number(data.totalAmount)) : '0');
+        setNotes(data.notes || '');
+
+        // Prepopulate event type
+        if (EVENT_TYPE_OPTIONS.includes(data.eventType)) {
+          setEventType(data.eventType);
+          setCustomEventType('');
+        } else {
+          setEventType('Other Event');
+          setCustomEventType(data.eventType || '');
+        }
+
+        // Prepopulate sessions & dates
+        const activeSessions = data.sessions.filter((s) => s.status === 'BOOKED');
+        const targetSessions = activeSessions.length > 0 ? activeSessions : data.sessions;
+        const sessionDates = targetSessions.map((s) => s.bookingDate).sort();
+
+        const minDate = sessionDates[0] || new Date().toISOString().slice(0, 10);
+        const maxDate = sessionDates[sessionDates.length - 1] || minDate;
+
+        setStartDate(minDate);
+        setEndDate(maxDate);
+
+        const initialSelectedMap: Record<string, { morning: boolean; evening: boolean }> = {};
+        const initialCustomTimesMap: Record<string, { startTime: string; endTime: string }> = {};
+
+        for (const s of targetSessions) {
+          if (!initialSelectedMap[s.bookingDate]) {
+            initialSelectedMap[s.bookingDate] = { morning: false, evening: false };
+          }
+          if (s.session === 'MORNING') {
+            initialSelectedMap[s.bookingDate].morning = true;
+          } else if (s.session === 'EVENING') {
+            initialSelectedMap[s.bookingDate].evening = true;
+          }
+
+          const defaultStart = s.session === 'MORNING' ? '11:00 AM' : '5:00 PM';
+          const defaultEnd = s.session === 'MORNING' ? '3:00 PM' : '9:00 PM';
+
+          initialCustomTimesMap[`${s.bookingDate}_${s.session}`] = {
+            startTime: s.startTime ? formatTimeTo12Hour(s.startTime) || s.startTime : defaultStart,
+            endTime: s.endTime ? formatTimeTo12Hour(s.endTime) || s.endTime : defaultEnd,
+          };
+        }
+
+        setSelectedSessions(initialSelectedMap);
+        setSessionCustomTimes(initialCustomTimesMap);
+      } catch (err: unknown) {
+        if (!isMounted) return;
+        const msg = err instanceof Error ? err.message : 'Unable to load booking details for editing.';
+        setInitialError(msg);
+      } finally {
+        if (isMounted) setInitialLoading(false);
+      }
+    };
+
+    loadOriginal();
+    return () => {
+      isMounted = false;
+    };
+  }, [bookingId]);
+
   // Generate list of dates between start and end
   const dateList = useMemo(() => {
+    if (!startDate || !endDate || endDate < startDate) return [];
     return getDatesInRange(startDate, endDate);
   }, [startDate, endDate]);
 
@@ -115,10 +190,12 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
     loadRangeAvailability();
   }, [loadRangeAvailability]);
 
-  // Check if a specific session is already booked on a date
+  // Check if a specific session is already booked on a date by ANOTHER booking
   const isSessionOccupied = useCallback(
     (dateKey: string, session: SessionType): boolean => {
       for (const b of existingBookings) {
+        // Skip current booking so manager can keep or toggle its own slots freely
+        if (b.id === bookingId) continue;
         if (b.status !== 'CONFIRMED') continue;
         for (const s of b.sessions) {
           if (s.bookingDate === dateKey && s.session === session && s.status === 'BOOKED') {
@@ -128,7 +205,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
       }
       return false;
     },
-    [existingBookings]
+    [existingBookings, bookingId]
   );
 
   // Handle session checkbox toggle
@@ -306,13 +383,13 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
   };
 
   // Final Confirmation Execution
-  const handleConfirmBooking = async () => {
+  const handleConfirmSave = async () => {
     setServerError(null);
     setSubmitting(true);
     try {
       const finalEventType = eventType === 'Other Event' ? customEventType.trim() : eventType.trim();
 
-      const payload = {
+      const payload: UpdateBookingPayload = {
         eventName: eventName.trim(),
         contactName: contactName.trim(),
         contactPhone: contactPhone.trim(),
@@ -322,21 +399,21 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
         sessions: activeSelectedSessions,
       };
 
-      const newBooking = await createBooking(payload);
+      await updateBooking(bookingId, payload);
 
       setIsSummaryModalOpen(false);
-      setSuccessMessage('✓ Booking created successfully!');
+      setSuccessMessage('✓ Booking updated successfully!');
       setTimeout(() => {
-        onSuccess(newBooking.id);
+        onSuccess();
       }, 600);
     } catch (err: unknown) {
       const status = (err as { status?: number }).status;
       const code = (err as { code?: string }).code;
 
-      let message = 'Unable to create booking. Please try again.';
+      let message = 'Unable to update booking. Please try again.';
       if (status === 409 || code === 'BOOKING_CONFLICT') {
         message =
-          'One or more selected sessions are no longer available. Please review your selection and try again.';
+          'One or more selected sessions are already booked by another event. Please review your selection and try again.';
         // Refresh availability to display updated conflicts
         loadRangeAvailability();
       } else if (status === 401) {
@@ -350,50 +427,98 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
     }
   };
 
+  if (initialLoading) {
+    return (
+      <div className="space-y-6 max-w-4xl mx-auto animate-pulse">
+        <div className="h-16 bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+          <div className="w-28 h-8 bg-slate-100 rounded-xl" />
+          <div className="w-24 h-6 bg-slate-100 rounded-lg" />
+        </div>
+        <div className="h-40 bg-white border border-slate-200/80 rounded-2xl p-8 space-y-3 shadow-sm">
+          <div className="w-24 h-5 bg-slate-100 rounded-full" />
+          <div className="w-64 h-8 bg-slate-100 rounded-lg" />
+          <div className="w-48 h-4 bg-slate-100 rounded" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="h-48 bg-white border border-slate-200/80 rounded-2xl shadow-sm" />
+          <div className="h-48 bg-white border border-slate-200/80 rounded-2xl shadow-sm" />
+        </div>
+      </div>
+    );
+  }
+
+  if (initialError || !originalBooking) {
+    return (
+      <div className="space-y-6 max-w-2xl mx-auto py-8 animate-in fade-in">
+        <div className="p-8 sm:p-10 rounded-2xl bg-rose-50 border border-rose-200 text-center space-y-4 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+              {initialError || 'Booking not found'}
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600">
+              The booking record could not be loaded for editing.
+            </p>
+          </div>
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs sm:text-sm font-semibold text-white transition-all cursor-pointer shadow-sm active:scale-95"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Booking Details</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 sm:space-y-8 max-w-4xl mx-auto animate-in fade-in duration-200">
       {/* Top Bar with Cancel Button */}
       <div className="flex items-center justify-between bg-white border border-slate-200/80 rounded-2xl p-3 sm:p-5 shadow-sm">
         <button
-          id="cancel-booking-top-btn"
+          id="cancel-edit-booking-top-btn"
           type="button"
           onClick={onCancel}
           disabled={submitting}
           className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Cancel</span>
+          <span>Back to Booking Details</span>
         </button>
 
-        <span className="text-xs font-mono text-slate-600 bg-slate-100 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 font-medium">
-          New Booking Entry
+        <span className="text-xs font-mono text-indigo-700 bg-indigo-50 px-2.5 sm:px-3 py-1.5 rounded-lg border border-indigo-200 font-semibold flex items-center gap-1.5">
+          <Edit3 className="w-3.5 h-3.5" />
+          <span>Edit Booking</span>
         </span>
       </div>
 
-      {/* Hero Selected Banner */}
+      {/* Hero Banner */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-8 shadow-sm relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
             <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 mb-1">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Booking Entry</span>
+              <span>Booking Modification</span>
             </div>
             <h1 className="text-xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              New Booking
+              Edit Booking
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Complete event information and select required session slots.
+              Update event specifications, customer contacts, schedule dates, or session timeslots.
             </p>
           </div>
 
-          {/* Selected Session Pill */}
+          {/* Original Event Info Pill */}
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1 w-full sm:w-auto">
-            <span className="text-slate-500 font-medium">Initial Selected Date:</span>
-            <p className="font-bold text-slate-800">{formatDisplayDate(initialDateKey)}</p>
-            <div className="flex items-center gap-1.5 text-indigo-600 font-semibold pt-0.5">
-              {initialSession === 'MORNING' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-              <span>{initialSession === 'MORNING' ? 'Morning — 11:00 AM to 3:00 PM' : 'Evening — 5:00 PM to 9:00 PM'}</span>
-            </div>
+            <span className="text-slate-500 font-medium">Original Event:</span>
+            <p className="font-bold text-slate-800 line-clamp-1">{originalBooking.eventName}</p>
+            <span className="text-slate-500 font-mono text-[11px] block">{originalBooking.id}</span>
           </div>
         </div>
       </div>
@@ -403,7 +528,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
         <div className="p-3.5 sm:p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-3 text-rose-800 text-sm animate-in fade-in">
           <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <p className="font-bold text-slate-900">Booking Error</p>
+            <p className="font-bold text-slate-900">Update Error</p>
             <p className="text-xs sm:text-sm text-rose-700">{serverError}</p>
           </div>
         </div>
@@ -542,7 +667,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
               )}
             </div>
 
-            {/* Custom Event Type (shown immediately below when "Other Event" is selected) */}
+            {/* Custom Event Type */}
             {eventType === 'Other Event' && (
               <div className="space-y-1.5 sm:col-span-2 animate-in fade-in duration-150">
                 <label htmlFor="custom-event-type" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
@@ -733,7 +858,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
                         <div>
                           {morningOccupied ? (
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
-                              🔴 BOOKED
+                              🔴 BOOKED (OTHER EVENT)
                             </span>
                           ) : (
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
@@ -807,7 +932,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
                           />
                           <div>
                             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                              <Moon className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                              <Moon className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                               <span>Evening Session</span>
                             </div>
                             <span className="text-[11px] text-slate-500">
@@ -821,7 +946,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
                         <div>
                           {eveningOccupied ? (
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
-                              🔴 BOOKED
+                              🔴 BOOKED (OTHER EVENT)
                             </span>
                           ) : (
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
@@ -875,15 +1000,15 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
           </div>
         </div>
 
-        {/* SECTION 4: Amount & Notes */}
+        {/* SECTION 4: Financial & Additional Notes */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-7 space-y-4 sm:space-y-5 shadow-sm">
           <div className="border-b border-slate-100 pb-3">
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Amount & Notes</h2>
-            <p className="text-xs text-slate-500">Pricing and special auditorium requirements</p>
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Financial & Notes</h2>
+            <p className="text-xs text-slate-500">Booking charge rate and special requirements</p>
           </div>
 
-          <div className="space-y-4 sm:space-y-5">
-            {/* Total Amount (₹) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            {/* Total Amount */}
             <div className="space-y-1.5">
               <label htmlFor="total-amount" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                 Total Amount (₹) <span className="text-rose-500">*</span>
@@ -899,7 +1024,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
                   value={totalAmount}
                   onChange={(e) => setTotalAmount(e.target.value)}
                   placeholder="0.00"
-                  className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all font-mono ${
+                  className={`w-full pl-10 pr-3.5 sm:pr-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all ${
                     formErrors.totalAmount ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-200'
                   }`}
                 />
@@ -911,20 +1036,19 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
             </div>
 
             {/* Notes */}
-            <div className="space-y-1.5">
-              <label htmlFor="notes" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                Notes / Special Requirements (Optional)
+            <div className="space-y-1.5 sm:col-span-2">
+              <label htmlFor="booking-notes" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                Notes / Special Requirements
               </label>
               <div className="relative">
                 <textarea
-                  id="notes"
+                  id="booking-notes"
                   name="notes"
                   rows={3}
-                  autoComplete="off"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="e.g. Stage lighting requirements, mic setup, additional seating..."
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all resize-none"
+                  placeholder="e.g. VIP dining arrangement, generator backup requested, stage lighting needs..."
+                  className="w-full pl-10 pr-3.5 sm:pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all"
                 />
                 <FileText className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
               </div>
@@ -932,104 +1056,49 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
           </div>
         </div>
 
-        {/* SECTION 5: Booking Summary Card */}
-        <div className="bg-indigo-50/50 border border-indigo-200 rounded-2xl p-4 sm:p-7 space-y-4 shadow-sm">
-          <div className="flex items-center justify-between border-b border-indigo-100 pb-3">
-            <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-indigo-600" />
-              <span>Booking Summary</span>
-            </h3>
-            <span className="text-xs text-slate-500 font-medium">Review prior to submission</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs">
-            <div>
-              <span className="text-slate-500 font-medium">Event:</span>
-              <p className="text-sm font-bold text-slate-900 truncate mt-0.5">
-                {eventName || '(Untitled Event)'}
-              </p>
-            </div>
-
-            <div>
-              <span className="text-slate-500 font-medium">Contact:</span>
-              <p className="text-sm font-bold text-slate-900 truncate mt-0.5">
-                {contactName || '(No contact specified)'} {contactPhone ? `(${contactPhone})` : ''}
-              </p>
-            </div>
-
-            <div>
-              <span className="text-slate-500 font-medium">Date Range:</span>
-              <p className="text-sm font-bold text-slate-900 mt-0.5">
-                {formatShortDate(startDate)} {startDate !== endDate ? `– ${formatShortDate(endDate)}` : ''}
-              </p>
-            </div>
-
-            <div>
-              <span className="text-slate-500 font-medium">Total Amount:</span>
-              <p className="text-sm font-bold text-emerald-700 font-mono mt-0.5">
-                ₹{Number(totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-          </div>
-
-          {/* Reserved Sessions List in Summary */}
-          <div className="pt-3 border-t border-indigo-100">
-            <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide block mb-2">
-              Reserved Sessions ({activeSelectedSessions.length})
-            </span>
-            {activeSelectedSessions.length === 0 ? (
-              <p className="text-xs text-rose-600 italic font-medium">No sessions currently selected.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
-                {activeSelectedSessions.map((s, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 text-xs shadow-xs"
-                  >
-                    <span className="font-semibold text-slate-800">{formatShortDate(s.date)}</span>
-                    <div className="flex items-center gap-1.5 text-indigo-700 font-medium">
-                      <Clock className="w-3 h-3 text-slate-400" />
-                      <span>{s.session === 'MORNING' ? 'Morning' : 'Evening'}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* SECTION 6: Action Buttons */}
-        <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 sm:gap-3 pt-2">
+        {/* Action Buttons Footer */}
+        <div className="pt-2 flex flex-col-reverse sm:flex-row items-center justify-end gap-3">
           <button
-            id="cancel-booking-btn"
+            id="cancel-edit-booking-bottom-btn"
             type="button"
             onClick={onCancel}
             disabled={submitting}
-            className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
           >
-            CANCEL
+            <ArrowLeft className="w-4 h-4" />
+            <span>Cancel</span>
           </button>
 
           <button
-            id="create-booking-submit-btn"
+            id="submit-edit-booking-btn"
             type="submit"
             disabled={submitting}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 transition-all cursor-pointer shadow-md shadow-indigo-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 transition-all cursor-pointer shadow-md shadow-indigo-200 active:scale-95 disabled:opacity-50"
           >
-            <span>CREATE BOOKING</span>
+            {submitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Saving Changes...</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Save Changes</span>
+              </>
+            )}
           </button>
         </div>
       </form>
 
-      {/* Booking Summary & Confirmation Modal */}
+      {/* Confirmation & Summary Modal */}
       <BookingSummaryModal
         isOpen={isSummaryModalOpen}
         onClose={() => setIsSummaryModalOpen(false)}
-        onConfirm={handleConfirmBooking}
+        onConfirm={handleConfirmSave}
         isSubmitting={submitting}
         error={serverError}
         eventName={eventName}
-        eventType={eventType}
+        eventType={eventType === 'Other Event' ? customEventType : eventType}
         contactName={contactName}
         contactPhone={contactPhone}
         startDate={startDate}
@@ -1037,6 +1106,10 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
         totalAmount={Number(totalAmount) || 0}
         notes={notes}
         sessions={activeSelectedSessions}
+        title="Save Booking Changes"
+        subtitle="Please review your updated details before saving"
+        confirmButtonText="Save Changes"
+        submittingButtonText="Saving Changes..."
       />
     </div>
   );
