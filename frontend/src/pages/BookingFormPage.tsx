@@ -62,6 +62,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
   const [startDate, setStartDate] = useState(initialDateKey);
   const [endDate, setEndDate] = useState(initialDateKey);
   const [totalAmount, setTotalAmount] = useState<string>('0');
+  const [advanceAmount, setAdvanceAmount] = useState<string>('');
   const [notes, setNotes] = useState('');
 
   // Per-date sessions map: { [dateKey]: { morning: boolean, evening: boolean } }
@@ -289,6 +290,13 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
       errors.totalAmount = 'Total amount must be a non-negative number.';
     }
 
+    if (advanceAmount.trim() !== '') {
+      const numAdvance = Number(advanceAmount);
+      if (isNaN(numAdvance) || numAdvance < 0) {
+        errors.advanceAmount = 'Advance amount must be a non-negative number.';
+      }
+    }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -318,6 +326,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
         contactPhone: contactPhone.trim(),
         eventType: finalEventType,
         totalAmount: Number(totalAmount) || 0,
+        advanceAmount: advanceAmount.trim() ? Number(advanceAmount) : null,
         notes: notes.trim() || null,
         sessions: activeSelectedSessions,
       };
@@ -483,9 +492,10 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
               <div className="relative">
                 <input
                   id="contact-phone"
-                  name="contactPhone"
-                  type="tel"
-                  autoComplete="tel"
+                  name="bookingContactNumber"
+                  type="text"
+                  inputMode="tel"
+                  autoComplete="new-password"
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
                   placeholder="e.g. 9876543210"
@@ -732,12 +742,14 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
 
                         <div>
                           {morningOccupied ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
-                              🔴 BOOKED
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                              <span>BOOKED</span>
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                              🟢 AVAILABLE
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              <span>AVAILABLE</span>
                             </span>
                           )}
                         </div>
@@ -820,12 +832,14 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
 
                         <div>
                           {eveningOccupied ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
-                              🔴 BOOKED
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                              <span>BOOKED</span>
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                              🟢 AVAILABLE
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              <span>AVAILABLE</span>
                             </span>
                           )}
                         </div>
@@ -910,6 +924,33 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
               )}
             </div>
 
+            {/* Advance Amount */}
+            <div className="space-y-1.5">
+              <label htmlFor="advanceAmount" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                Advance Amount (₹)
+              </label>
+              <div className="relative">
+                <input
+                  id="advanceAmount"
+                  name="advanceAmount"
+                  type="number"
+                  min="0"
+                  step="any"
+                  autoComplete="off"
+                  value={advanceAmount}
+                  onChange={(e) => setAdvanceAmount(e.target.value)}
+                  placeholder="0.00"
+                  className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all font-mono ${
+                    formErrors.advanceAmount ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-200'
+                  }`}
+                />
+                <IndianRupee className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+              </div>
+              {formErrors.advanceAmount && (
+                <p className="text-xs text-rose-600 font-medium">{formErrors.advanceAmount}</p>
+              )}
+            </div>
+
             {/* Notes */}
             <div className="space-y-1.5">
               <label htmlFor="notes" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
@@ -970,6 +1011,15 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
                 ₹{Number(totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </p>
             </div>
+
+            {advanceAmount.trim() !== '' && Number(advanceAmount) > 0 && (
+              <div>
+                <span className="text-slate-500 font-medium">Advance Amount:</span>
+                <p className="text-sm font-bold text-slate-800 font-mono mt-0.5">
+                  ₹{Number(advanceAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Reserved Sessions List in Summary */}
@@ -1035,6 +1085,7 @@ export const BookingFormPage: React.FC<BookingFormPageProps> = ({
         startDate={startDate}
         endDate={endDate}
         totalAmount={Number(totalAmount) || 0}
+        advanceAmount={advanceAmount.trim() ? Number(advanceAmount) : null}
         notes={notes}
         sessions={activeSelectedSessions}
       />

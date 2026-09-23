@@ -54,14 +54,18 @@ export const bookingSessionItemSchema = z
  */
 export const createBookingSchema = z.object({
   eventName: z.string().trim().min(1, 'Event name is required'),
+  eventType: z.string().trim().min(1, 'Event type is required'),
   contactName: z.string().trim().min(1, 'Contact name is required'),
   contactPhone: z
     .string()
     .trim()
     .min(5, 'Contact phone number must be at least 5 digits')
     .max(20, 'Contact phone number cannot exceed 20 characters'),
-  eventType: z.string().trim().min(1, 'Event type is required'),
   totalAmount: z.coerce.number().min(0, 'Total amount must be non-negative').default(0),
+  advanceAmount: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? null : val),
+    z.coerce.number().min(0, 'Advance amount must be non-negative').nullable().optional()
+  ),
   notes: z.string().trim().nullable().optional(),
   sessions: z
     .array(bookingSessionItemSchema)
@@ -97,6 +101,10 @@ export const updateBookingSchema = z
       .optional(),
     eventType: z.string().trim().min(1, 'Event type cannot be empty').optional(),
     totalAmount: z.coerce.number().min(0, 'Total amount must be non-negative').optional(),
+    advanceAmount: z.preprocess(
+      (val) => (val === '' || val === null || val === undefined ? null : val),
+      z.coerce.number().min(0, 'Advance amount must be non-negative').nullable().optional()
+    ),
     notes: z.string().trim().nullable().optional(),
     sessions: z
       .array(bookingSessionItemSchema)

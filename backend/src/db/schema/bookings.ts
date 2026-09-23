@@ -10,6 +10,7 @@ export const bookings = pgTable('bookings', {
   contactPhone: text('contact_phone').notNull(),
   eventType: text('event_type').notNull(),
   totalAmount: numeric('total_amount', { precision: 12, scale: 2 }).notNull().default('0'),
+  advanceAmount: numeric('advance_amount', { precision: 12, scale: 2 }),
   status: bookingStatusEnum('status').notNull().default('CONFIRMED'),
   notes: text('notes'),
   createdBy: text('created_by').notNull(),

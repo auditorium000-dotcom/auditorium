@@ -21,6 +21,7 @@ export interface Booking {
   contactPhone: string;
   eventType: string;
   totalAmount: string;
+  advanceAmount?: string | null;
   status: BookingStatus;
   notes: string | null;
   createdBy: string;

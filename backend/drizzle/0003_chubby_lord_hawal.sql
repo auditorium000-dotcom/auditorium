@@ -1,0 +1,1 @@
+ALTER TABLE "bookings" ADD COLUMN "advance_amount" numeric(12, 2);

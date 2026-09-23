@@ -32,6 +32,7 @@ interface BookingSummaryModalProps {
   startDate: string;
   endDate: string;
   totalAmount: number;
+  advanceAmount?: number | null;
   notes: string;
   sessions: Array<{ date: string; session: SessionType; startTime?: string; endTime?: string }>;
   title?: string;
@@ -53,6 +54,7 @@ export const BookingSummaryModal: React.FC<BookingSummaryModalProps> = ({
   startDate,
   endDate,
   totalAmount,
+  advanceAmount,
   notes,
   sessions,
   title = 'Booking Summary',
@@ -202,17 +204,30 @@ export const BookingSummaryModal: React.FC<BookingSummaryModalProps> = ({
         </div>
 
         {/* Section 3: Pricing & Notes */}
-        <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50/60 to-slate-50 border border-emerald-200/80 flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 block">
-              Total Payable Amount
-            </span>
-            <span className="text-xs text-slate-500">Fixed rate calculation</span>
+        <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50/60 to-slate-50 border border-emerald-200/80 space-y-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 block">
+                Total Payable Amount
+              </span>
+              <span className="text-xs text-slate-500">Fixed rate calculation</span>
+            </div>
+            <p className="text-xl sm:text-2xl font-bold text-emerald-700 font-mono flex items-center">
+              <IndianRupee className="w-5 h-5 inline mr-0.5" />
+              <span>{Number(totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            </p>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-emerald-700 font-mono flex items-center">
-            <IndianRupee className="w-5 h-5 inline mr-0.5" />
-            <span>{Number(totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-          </p>
+
+          {advanceAmount != null && Number(advanceAmount) > 0 && (
+            <div className="flex items-center justify-between pt-2 border-t border-emerald-200/60 text-xs">
+              <span className="text-slate-600 font-medium">
+                Advance Amount
+              </span>
+              <span className="font-bold text-slate-800 font-mono">
+                ₹{Number(advanceAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Notes (if any) */}

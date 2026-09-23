@@ -17,6 +17,7 @@ export interface BookingWithSessions {
   contactPhone: string;
   eventType: string;
   totalAmount: string;
+  advanceAmount: string | null;
   status: 'CONFIRMED' | 'CANCELLED';
   notes: string | null;
   createdBy: string;
@@ -97,6 +98,10 @@ export class BookingService {
             contactPhone: data.contactPhone,
             eventType: data.eventType,
             totalAmount: data.totalAmount.toFixed(2),
+            advanceAmount:
+              data.advanceAmount !== undefined && data.advanceAmount !== null
+                ? data.advanceAmount.toFixed(2)
+                : null,
             status: 'CONFIRMED',
             notes: data.notes || null,
             createdBy: userId,
@@ -337,6 +342,10 @@ export class BookingService {
         if (data.contactPhone !== undefined) updateData.contactPhone = data.contactPhone;
         if (data.eventType !== undefined) updateData.eventType = data.eventType;
         if (data.totalAmount !== undefined) updateData.totalAmount = data.totalAmount.toFixed(2);
+        if (data.advanceAmount !== undefined) {
+          updateData.advanceAmount =
+            data.advanceAmount !== null ? data.advanceAmount.toFixed(2) : null;
+        }
         if (data.notes !== undefined) updateData.notes = data.notes;
 
         const [updated] = await tx

@@ -51,8 +51,8 @@ export interface Booking {
   endDate: string; // YYYY-MM-DD
   selectedSessions: SessionSlot[];
   totalAmount: number;
-  advanceAmount: number;
-  balanceAmount: number;
+  advanceAmount?: number | null;
+  balanceAmount?: number;
   paymentStatus: PaymentStatus;
   bookingStatus: BookingStatus;
   notes?: string;

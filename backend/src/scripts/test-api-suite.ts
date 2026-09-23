@@ -495,6 +495,70 @@ async function runTestSuite() {
     assert(verifyBookingData.sessions[0].bookingDate === '2099-06-05', 'Original session date 2099-06-05 preserved');
     console.log('  ✅ Passed: Edit conflict rejected with 409 and original booking sessions preserved intact.');
 
+    // ==========================================
+    // TEST 20: Advance Amount Creation, Retrieval & Update
+    // ==========================================
+    console.log('\nTest 20: Advance Amount (Create, Validation, Update, Clear)');
+    // 20a. Reject negative advance amount
+    const negAdvanceRes = await fetch(`${BASE_URL}/bookings`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        eventName: 'Negative Advance Test',
+        contactName: 'Tester',
+        contactPhone: '9876500009',
+        eventType: 'Seminar',
+        totalAmount: 10000,
+        advanceAmount: -500,
+        sessions: [{ date: '2099-06-20', session: 'MORNING' }],
+      }),
+    });
+    assert(negAdvanceRes.status === 400, `Expected 400 for negative advance amount, got ${negAdvanceRes.status}`);
+
+    // 20b. Create with advance amount
+    const advBookingRes = await fetch(`${BASE_URL}/bookings`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        eventName: 'Advance Amount Gala',
+        contactName: 'Arthur Dent',
+        contactPhone: '9876543219',
+        eventType: 'Private Gathering',
+        totalAmount: 50000,
+        advanceAmount: 15000.5,
+        sessions: [{ date: '2099-06-20', session: 'MORNING' }],
+      }),
+    });
+    assert(advBookingRes.status === 201, `Expected 201 on advance amount booking creation, got ${advBookingRes.status}`);
+    const advBooking = await advBookingRes.json();
+    createdBookingIds.push(advBooking.id);
+    assert(advBooking.advanceAmount === '15000.50', `Expected advanceAmount '15000.50', got ${advBooking.advanceAmount}`);
+
+    // 20c. Update advance amount to different value
+    const updateAdvRes = await fetch(`${BASE_URL}/bookings/${advBooking.id}`, {
+      method: 'PATCH',
+      headers: authHeaders,
+      body: JSON.stringify({
+        advanceAmount: 20000,
+      }),
+    });
+    assert(updateAdvRes.status === 200, `Expected 200 on advance amount update, got ${updateAdvRes.status}`);
+    const updatedAdvBooking = await updateAdvRes.json();
+    assert(updatedAdvBooking.advanceAmount === '20000.00', `Expected advanceAmount '20000.00', got ${updatedAdvBooking.advanceAmount}`);
+
+    // 20d. Clear advance amount to null
+    const clearAdvRes = await fetch(`${BASE_URL}/bookings/${advBooking.id}`, {
+      method: 'PATCH',
+      headers: authHeaders,
+      body: JSON.stringify({
+        advanceAmount: null,
+      }),
+    });
+    assert(clearAdvRes.status === 200, `Expected 200 on advance amount clear, got ${clearAdvRes.status}`);
+    const clearedAdvBooking = await clearAdvRes.json();
+    assert(clearedAdvBooking.advanceAmount === null, `Expected advanceAmount null, got ${clearedAdvBooking.advanceAmount}`);
+    console.log('  ✅ Passed: Advance amount creation, rejection of negative values, updating, and clearing verified.');
+
     console.log('\n🏆 ALL INTEGRATION TESTS PASSED WITH 100% SUCCESS!\n');
   } finally {
     // Clean up test data

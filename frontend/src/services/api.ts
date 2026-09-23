@@ -59,6 +59,7 @@ export interface CreateBookingPayload {
   contactPhone: string;
   eventType: string;
   totalAmount: number;
+  advanceAmount?: number | null;
   notes?: string | null;
   sessions: {
     date: string;
@@ -145,6 +146,7 @@ export interface UpdateBookingPayload {
   contactPhone?: string;
   eventType?: string;
   totalAmount?: number;
+  advanceAmount?: number | null;
   notes?: string | null;
   sessions?: {
     date: string;

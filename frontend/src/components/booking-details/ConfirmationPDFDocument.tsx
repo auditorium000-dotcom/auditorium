@@ -58,6 +58,7 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
       });
 
     const totalAmount = Number(booking.totalAmount) || 0;
+    const advanceAmount = Number(booking.advanceAmount) || 0;
 
     // Unique dates
     const uniqueDates = Array.from(new Set(activeSessions.map((s) => s.bookingDate))).sort();
@@ -232,12 +233,12 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
           </svg>
         </div>
 
-        {/* BACKGROUND EXACT WATERMARK EMBLEM (CENTERED, NEVER CUT OFF) */}
-        <div className="absolute left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-[0.065] z-0 select-none flex items-center justify-center">
+        {/* BACKGROUND WATERMARK EMBLEM (SCALED & POSITIONED ON RIGHT, FULLY CONTAINED) */}
+        <div className="absolute right-4 top-[51%] -translate-y-1/2 pointer-events-none opacity-[0.065] z-0 select-none flex items-center justify-end">
           <img
             src="/oruma-avenue-emblem.png"
             alt=""
-            className="w-[450px] h-[450px] object-contain"
+            className="w-[520px] h-[520px] object-contain"
           />
         </div>
 
@@ -373,6 +374,24 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
                   </div>
                 </td>
               </tr>
+
+              {/* Advance Amount (Conditionally displayed) */}
+              {advanceAmount > 0 && (
+                <>
+                  {/* Spacer Row */}
+                  <tr>
+                    <td colSpan={3} className="h-5"></td>
+                  </tr>
+
+                  <tr className="pdf-table-row">
+                    <td className="pdf-label">Advance Amount</td>
+                    <td className="pdf-colon">:</td>
+                    <td className="pdf-value font-bold text-slate-900">
+                      ₹{advanceAmount.toLocaleString('en-IN')}
+                    </td>
+                  </tr>
+                </>
+              )}
 
               {/* Spacer Row */}
               <tr>
