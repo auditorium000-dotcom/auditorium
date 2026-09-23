@@ -177,7 +177,19 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
         `}</style>
 
         {/* TOP-LEFT CORNER GOLD RIBBON WAVE ACCENT */}
-        <div className="absolute top-0 left-0 w-64 h-64 pointer-events-none z-0 overflow-hidden">
+        <div
+          className="absolute top-0 left-0 w-64 h-64 pointer-events-none z-0 overflow-hidden"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '256px',
+            height: '256px',
+            pointerEvents: 'none',
+            zIndex: 0,
+            overflow: 'hidden',
+          }}
+        >
           <svg viewBox="0 0 250 250" className="w-full h-full" fill="none">
             <defs>
               <linearGradient id="goldTopLeft" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -205,40 +217,70 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
           </svg>
         </div>
 
-        {/* BOTTOM-RIGHT CORNER GOLD RIBBON WAVE ACCENT */}
-        <div className="absolute bottom-0 right-0 w-72 h-72 pointer-events-none z-0 overflow-hidden">
-          <svg viewBox="0 0 250 250" className="w-full h-full" fill="none">
+        {/* BOTTOM-RIGHT CORNER GOLD GEOMETRIC ACCENT */}
+        <div
+          className="absolute bottom-0 right-0 w-[360px] h-[360px] pointer-events-none z-0 overflow-hidden"
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            right: 0,
+            width: '360px',
+            height: '360px',
+            pointerEvents: 'none',
+            zIndex: 0,
+            overflow: 'hidden',
+          }}
+        >
+          <svg viewBox="0 0 300 300" className="w-full h-full" fill="none">
             <defs>
-              <linearGradient id="goldBottomRight" x1="100%" y1="100%" x2="0%" y2="0%">
-                <stop offset="0%" stopColor="#66440c" />
-                <stop offset="25%" stopColor="#a8792b" />
-                <stop offset="55%" stopColor="#f5e1b5" />
-                <stop offset="80%" stopColor="#c59b27" />
-                <stop offset="100%" stopColor="#8c6221" />
+              <linearGradient id="goldBottomRight" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#e8cf8d" />
+                <stop offset="30%" stopColor="#d4af37" />
+                <stop offset="70%" stopColor="#aa7c29" />
+                <stop offset="100%" stopColor="#7a5214" />
               </linearGradient>
-              <linearGradient id="goldBottomRightSubtle" x1="100%" y1="100%" x2="0%" y2="0%">
-                <stop offset="0%" stopColor="#4a310c" />
-                <stop offset="100%" stopColor="#8c6221" />
+              <linearGradient id="goldBottomRightInner" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#69430c" />
+                <stop offset="100%" stopColor="#3d2504" />
               </linearGradient>
             </defs>
             <path
-              d="M250 250 L50 250 C110 180, 180 110, 250 50 Z"
+              d="M300 300 L0 300 L300 0 Z"
               fill="url(#goldBottomRight)"
             />
             <path
-              d="M250 250 L135 250 C175 195, 210 160, 250 135 Z"
-              fill="url(#goldBottomRightSubtle)"
-              fillOpacity="0.45"
+              d="M300 300 L130 300 L300 130 Z"
+              fill="url(#goldBottomRightInner)"
+              fillOpacity="0.8"
             />
           </svg>
         </div>
 
         {/* BACKGROUND WATERMARK EMBLEM (SCALED & POSITIONED ON RIGHT, FULLY CONTAINED) */}
-        <div className="absolute right-4 top-[51%] -translate-y-1/2 pointer-events-none opacity-[0.065] z-0 select-none flex items-center justify-end">
+        <div
+          className="pointer-events-none select-none flex items-center justify-end"
+          style={{
+            position: 'absolute',
+            right: '16px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            pointerEvents: 'none',
+            opacity: 0.065,
+            zIndex: 0,
+            width: '520px',
+            height: '520px',
+          }}
+        >
           <img
             src="/oruma-avenue-emblem.png"
             alt=""
-            className="w-[520px] h-[520px] object-contain"
+            style={{
+              width: '520px',
+              height: '520px',
+              objectFit: 'contain',
+              opacity: 0.065,
+              display: 'block',
+            }}
           />
         </div>
 

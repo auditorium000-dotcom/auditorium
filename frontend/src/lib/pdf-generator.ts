@@ -24,17 +24,16 @@ export async function generateBookingPDFBlob(
     }
   }
 
-  // 2. Clone the target into an isolated unscaled offscreen container to avoid any parent CSS transforms
+  // 2. Clone the target into an isolated unscaled container to avoid any parent CSS transforms
   const offscreenContainer = document.createElement('div');
   offscreenContainer.style.position = 'fixed';
-  offscreenContainer.style.left = '-99999px';
+  offscreenContainer.style.left = '0';
   offscreenContainer.style.top = '0';
   offscreenContainer.style.width = '794px';
   offscreenContainer.style.height = '1123px';
-  offscreenContainer.style.zIndex = '-9999';
+  offscreenContainer.style.zIndex = '-99999';
   offscreenContainer.style.overflow = 'hidden';
   offscreenContainer.style.transform = 'none';
-  offscreenContainer.style.opacity = '1';
   offscreenContainer.style.pointerEvents = 'none';
 
   const clonedElement = element.cloneNode(true) as HTMLElement;
@@ -74,6 +73,10 @@ export async function generateBookingPDFBlob(
       height: 1123,
       windowWidth: 794,
       windowHeight: 1123,
+      x: 0,
+      y: 0,
+      scrollX: 0,
+      scrollY: 0,
       onclone: (clonedDoc) => {
         // Synchronize all loaded fonts into the cloned iframe
         if (typeof document !== 'undefined' && document.fonts && clonedDoc.fonts) {
