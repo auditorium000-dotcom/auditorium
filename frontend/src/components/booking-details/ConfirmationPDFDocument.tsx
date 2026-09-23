@@ -206,8 +206,8 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
         </div>
 
         {/* BOTTOM-RIGHT CORNER GOLD RIBBON WAVE ACCENT */}
-        <div className="absolute bottom-0 right-0 w-44 h-44 pointer-events-none z-0 overflow-hidden">
-          <svg viewBox="0 0 200 200" className="w-full h-full" fill="none">
+        <div className="absolute bottom-0 right-0 w-72 h-72 pointer-events-none z-0 overflow-hidden">
+          <svg viewBox="0 0 250 250" className="w-full h-full" fill="none">
             <defs>
               <linearGradient id="goldBottomRight" x1="100%" y1="100%" x2="0%" y2="0%">
                 <stop offset="0%" stopColor="#66440c" />
@@ -222,11 +222,11 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
               </linearGradient>
             </defs>
             <path
-              d="M200 200 L110 200 C140 160, 160 140, 200 110 Z"
+              d="M250 250 L50 250 C110 180, 180 110, 250 50 Z"
               fill="url(#goldBottomRight)"
             />
             <path
-              d="M200 200 L150 200 C170 175, 175 170, 200 150 Z"
+              d="M250 250 L135 250 C175 195, 210 160, 250 135 Z"
               fill="url(#goldBottomRightSubtle)"
               fillOpacity="0.45"
             />
@@ -487,8 +487,10 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
                       <div className="w-7 h-7 rounded-full bg-[#8c6221] text-white flex items-center justify-center shrink-0 shadow-2xs">
                         <Globe className="w-3.5 h-3.5 text-white" />
                       </div>
-                      <div className="leading-tight">
-                        <p style={{ fontWeight: 600, color: '#0f172a', fontSize: '11px', letterSpacing: '0.01px' }}>www.orumaavenue.com</p>
+                      <div className="leading-tight" style={{ transform: 'translateY(-1.5px)' }}>
+                        <p style={{ fontWeight: 600, color: '#0f172a', fontSize: '11px', letterSpacing: '0.01px' }}>
+                          www.orumaavenue.com
+                        </p>
                       </div>
                     </div>
                   </td>
