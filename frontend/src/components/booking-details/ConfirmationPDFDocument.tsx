@@ -197,40 +197,38 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
             overflow: 'hidden',
           }}
         >
-          {/* TOP-LEFT CORNER GOLD RIBBON WAVE ACCENT */}
+          {/* TOP-LEFT CORNER GOLD GEOMETRIC ACCENT */}
           <div
             style={{
               position: 'absolute',
               top: 0,
               left: 0,
-              width: '256px',
-              height: '256px',
+              width: '360px',
+              height: '360px',
               overflow: 'hidden',
             }}
           >
-            <svg viewBox="0 0 250 250" style={{ width: '100%', height: '100%' }} fill="none">
+            <svg viewBox="0 0 300 300" style={{ width: '100%', height: '100%' }} fill="none">
               <defs>
                 <linearGradient id="goldTopLeft" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stopColor="#7a5214" />
-                  <stop offset="25%" stopColor="#a8792b" />
-                  <stop offset="55%" stopColor="#f5e1b5" />
-                  <stop offset="80%" stopColor="#c59b27" />
-                  <stop offset="100%" stopColor="#8c6221" />
+                  <stop offset="35%" stopColor="#ad7e2b" />
+                  <stop offset="70%" stopColor="#d4af37" />
+                  <stop offset="100%" stopColor="#e8cf8d" />
                 </linearGradient>
-                <linearGradient id="goldTopLeftSubtle" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#5a3d12" />
-                  <stop offset="50%" stopColor="#8c6221" />
-                  <stop offset="100%" stopColor="#c59b27" />
+                <linearGradient id="goldTopLeftInner" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#3d2504" />
+                  <stop offset="100%" stopColor="#69430c" />
                 </linearGradient>
               </defs>
               <path
-                d="M0 0 L210 0 C160 70, 80 140, 0 210 Z"
+                d="M0 0 L300 0 L0 300 Z"
                 fill="url(#goldTopLeft)"
               />
               <path
-                d="M0 0 L130 0 C100 60, 60 100, 0 130 Z"
-                fill="url(#goldTopLeftSubtle)"
-                fillOpacity="0.45"
+                d="M0 0 L130 0 L0 130 Z"
+                fill="url(#goldTopLeftInner)"
+                fillOpacity="0.8"
               />
             </svg>
           </div>
