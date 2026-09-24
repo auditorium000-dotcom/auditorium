@@ -1,5 +1,5 @@
 import { forwardRef } from 'react';
-import { MapPin, Phone as PhoneIcon, Globe } from 'lucide-react';
+import { MapPin, Phone as PhoneIcon } from 'lucide-react';
 import type { Booking } from '../../types/booking';
 import type { Payment } from '../../types/payment';
 
@@ -596,36 +596,34 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
                       </table>
                     </td>
 
-                    {/* Column 3: Website */}
+                    {/* Column 3: Website (Unified Vector Layout for 100% failproof alignment in download) */}
                     <td style={{ width: '29%', verticalAlign: 'middle', paddingLeft: '10px' }}>
-                      <table style={{ borderCollapse: 'collapse', border: 'none', margin: 0, padding: 0 }}>
-                        <tbody>
-                          <tr>
-                            <td style={{ verticalAlign: 'middle', padding: 0, width: '28px' }}>
-                              <div
-                                style={{
-                                  width: '28px',
-                                  height: '28px',
-                                  borderRadius: '50%',
-                                  backgroundColor: '#8c6221',
-                                  color: '#ffffff',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                                }}
-                              >
-                                <Globe style={{ width: '14px', height: '14px', color: '#ffffff' }} />
-                              </div>
-                            </td>
-                            <td style={{ verticalAlign: 'middle', padding: 0, paddingLeft: '8px' }}>
-                              <p style={{ fontWeight: 600, color: '#0f172a', fontSize: '11px', letterSpacing: '0.01px', margin: 0, lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-                                www.orumaavenue.com
-                              </p>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                      <svg width="190" height="28" viewBox="0 0 190 28" fill="none" style={{ display: 'block', overflow: 'visible' }}>
+                        {/* Circle Badge */}
+                        <circle cx="14" cy="14" r="14" fill="#8c6221" />
+                        {/* Globe Icon */}
+                        <g transform="translate(7, 7) scale(0.58333)" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+                          <path d="M2 12h20" />
+                        </g>
+                        {/* Website text */}
+                        <text
+                          x="36"
+                          y="14.5"
+                          dominantBaseline="central"
+                          textAnchor="start"
+                          fill="#0f172a"
+                          style={{
+                            fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            letterSpacing: '0.01px',
+                          }}
+                        >
+                          www.orumaavenue.com
+                        </text>
+                      </svg>
                     </td>
                   </tr>
                 </tbody>
