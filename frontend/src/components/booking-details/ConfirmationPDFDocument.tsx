@@ -197,7 +197,7 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
             overflow: 'hidden',
           }}
         >
-          {/* TOP-LEFT CORNER GOLD GEOMETRIC ACCENT */}
+          {/* TOP-LEFT CORNER GOLD GEOMETRIC & WAVE ACCENT */}
           <div
             style={{
               position: 'absolute',
@@ -208,63 +208,67 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
               overflow: 'hidden',
             }}
           >
-            <svg viewBox="0 0 300 300" style={{ width: '100%', height: '100%' }} fill="none">
+            <svg viewBox="0 0 250 250" style={{ width: '100%', height: '100%' }} fill="none">
               <defs>
                 <linearGradient id="goldTopLeft" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stopColor="#7a5214" />
-                  <stop offset="35%" stopColor="#ad7e2b" />
-                  <stop offset="70%" stopColor="#d4af37" />
-                  <stop offset="100%" stopColor="#e8cf8d" />
+                  <stop offset="25%" stopColor="#a8792b" />
+                  <stop offset="55%" stopColor="#f5e1b5" />
+                  <stop offset="80%" stopColor="#c59b27" />
+                  <stop offset="100%" stopColor="#8c6221" />
                 </linearGradient>
-                <linearGradient id="goldTopLeftInner" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#3d2504" />
-                  <stop offset="100%" stopColor="#69430c" />
+                <linearGradient id="goldTopLeftSubtle" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#4a310c" />
+                  <stop offset="50%" stopColor="#7a5214" />
+                  <stop offset="100%" stopColor="#a8792b" />
                 </linearGradient>
               </defs>
               <path
-                d="M0 0 L300 0 L0 300 Z"
+                d="M0 0 L250 0 L0 250 Z"
                 fill="url(#goldTopLeft)"
               />
               <path
-                d="M0 0 L130 0 L0 130 Z"
-                fill="url(#goldTopLeftInner)"
-                fillOpacity="0.8"
+                d="M0 0 L140 0 C105 60, 60 105, 0 140 Z"
+                fill="url(#goldTopLeftSubtle)"
+                fillOpacity="0.55"
               />
             </svg>
           </div>
 
-          {/* BOTTOM-RIGHT CORNER GOLD GEOMETRIC ACCENT */}
+          {/* BOTTOM-RIGHT CORNER GOLD GEOMETRIC & WAVE ACCENT */}
           <div
             style={{
               position: 'absolute',
               bottom: 0,
               right: 0,
-              width: '235px',
-              height: '235px',
+              width: '240px',
+              height: '240px',
               overflow: 'hidden',
             }}
           >
-            <svg viewBox="0 0 300 300" style={{ width: '100%', height: '100%' }} fill="none">
+            <svg viewBox="0 0 250 250" style={{ width: '100%', height: '100%' }} fill="none">
               <defs>
-                <linearGradient id="goldBottomRight" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#e8cf8d" />
-                  <stop offset="30%" stopColor="#d4af37" />
-                  <stop offset="70%" stopColor="#aa7c29" />
-                  <stop offset="100%" stopColor="#7a5214" />
+                <linearGradient id="goldBottomRight" x1="100%" y1="100%" x2="0%" y2="0%">
+                  <stop offset="0%" stopColor="#7a5214" />
+                  <stop offset="25%" stopColor="#a8792b" />
+                  <stop offset="55%" stopColor="#f5e1b5" />
+                  <stop offset="80%" stopColor="#c59b27" />
+                  <stop offset="100%" stopColor="#8c6221" />
                 </linearGradient>
-                <linearGradient id="goldBottomRightInner" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#69430c" />
-                  <stop offset="100%" stopColor="#3d2504" />
+                <linearGradient id="goldBottomRightSubtle" x1="100%" y1="100%" x2="0%" y2="0%">
+                  <stop offset="0%" stopColor="#4a310c" />
+                  <stop offset="50%" stopColor="#7a5214" />
+                  <stop offset="100%" stopColor="#a8792b" />
                 </linearGradient>
               </defs>
               <path
-                d="M300 300 L0 300 L300 0 Z"
+                d="M250 250 L0 250 L250 0 Z"
                 fill="url(#goldBottomRight)"
               />
               <path
-                d="M300 300 L130 300 L300 130 Z"
-                fill="url(#goldBottomRightInner)"
-                fillOpacity="0.8"
+                d="M250 250 L110 250 C145 190, 190 145, 250 110 Z"
+                fill="url(#goldBottomRightSubtle)"
+                fillOpacity="0.55"
               />
             </svg>
           </div>
@@ -527,55 +531,101 @@ export const ConfirmationPDFDocument = forwardRef<HTMLDivElement, ConfirmationPD
 
             {/* Bottom Contact Information Bar (3 Columns) */}
             <div className="pt-3 pb-1 border-t border-amber-200/70">
-              <table className="w-full">
+              <table className="w-full border-collapse">
                 <tbody>
                   <tr>
+                    {/* Column 1: Location */}
                     <td style={{ width: '35%', verticalAlign: 'middle', paddingRight: '10px', borderRight: '1px solid rgba(197, 155, 39, 0.6)' }}>
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-[#8c6221] text-white flex items-center justify-center shrink-0 shadow-2xs">
-                          <MapPin className="w-3.5 h-3.5 fill-current text-white" />
-                        </div>
-                        <div className="leading-tight">
-                          <p style={{ fontWeight: 700, color: '#0f172a', fontSize: '11px', letterSpacing: '0.01px' }}>Oruma Avenue</p>
-                          <p style={{ fontSize: '10px', color: '#475569', letterSpacing: '0.01px' }}>Kadungallur, Kizhisseri, Malappuram, Kerala</p>
-                        </div>
-                      </div>
+                      <table style={{ borderCollapse: 'collapse', border: 'none', margin: 0, padding: 0 }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ verticalAlign: 'middle', padding: 0, width: '28px' }}>
+                              <div
+                                style={{
+                                  width: '28px',
+                                  height: '28px',
+                                  borderRadius: '50%',
+                                  backgroundColor: '#8c6221',
+                                  color: '#ffffff',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                }}
+                              >
+                                <MapPin style={{ width: '14px', height: '14px', color: '#ffffff', fill: 'currentColor' }} />
+                              </div>
+                            </td>
+                            <td style={{ verticalAlign: 'middle', padding: 0, paddingLeft: '8px' }}>
+                              <p style={{ fontWeight: 700, color: '#0f172a', fontSize: '11px', letterSpacing: '0.01px', margin: 0, lineHeight: 1.25 }}>Oruma Avenue</p>
+                              <p style={{ fontSize: '10px', color: '#475569', letterSpacing: '0.01px', margin: 0, marginTop: '2px', lineHeight: 1.25 }}>Kadungallur, Kizhisseri, Malappuram, Kerala</p>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </td>
+
+                    {/* Column 2: Phone & Email */}
                     <td style={{ width: '36%', verticalAlign: 'middle', paddingLeft: '10px', paddingRight: '10px', borderRight: '1px solid rgba(197, 155, 39, 0.6)' }}>
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-[#8c6221] text-white flex items-center justify-center shrink-0 shadow-2xs">
-                          <PhoneIcon className="w-3.5 h-3.5 fill-current text-white" />
-                        </div>
-                        <div className="leading-tight">
-                          <p style={{ fontWeight: 700, color: '#0f172a', fontSize: '11px', fontFamily: 'monospace', letterSpacing: '0.01px' }}>+91 77369 19392</p>
-                          <p style={{ fontSize: '10px', color: '#475569', letterSpacing: '0.01px' }}>orumaavenue@gmail.com</p>
-                        </div>
-                      </div>
+                      <table style={{ borderCollapse: 'collapse', border: 'none', margin: 0, padding: 0 }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ verticalAlign: 'middle', padding: 0, width: '28px' }}>
+                              <div
+                                style={{
+                                  width: '28px',
+                                  height: '28px',
+                                  borderRadius: '50%',
+                                  backgroundColor: '#8c6221',
+                                  color: '#ffffff',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                }}
+                              >
+                                <PhoneIcon style={{ width: '14px', height: '14px', color: '#ffffff', fill: 'currentColor' }} />
+                              </div>
+                            </td>
+                            <td style={{ verticalAlign: 'middle', padding: 0, paddingLeft: '8px' }}>
+                              <p style={{ fontWeight: 700, color: '#0f172a', fontSize: '11px', fontFamily: 'monospace', letterSpacing: '0.01px', margin: 0, lineHeight: 1.25 }}>+91 77369 19392</p>
+                              <p style={{ fontSize: '10px', color: '#475569', letterSpacing: '0.01px', margin: 0, marginTop: '2px', lineHeight: 1.25 }}>orumaavenue@gmail.com</p>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </td>
+
+                    {/* Column 3: Website */}
                     <td style={{ width: '29%', verticalAlign: 'middle', paddingLeft: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div
-                          style={{
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '50%',
-                            backgroundColor: '#8c6221',
-                            color: '#ffffff',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                          }}
-                        >
-                          <Globe style={{ width: '14px', height: '14px', color: '#ffffff' }} />
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', transform: 'translateY(-2.5px)' }}>
-                          <p style={{ fontWeight: 600, color: '#0f172a', fontSize: '11px', letterSpacing: '0.01px', margin: 0, lineHeight: 1 }}>
-                            www.orumaavenue.com
-                          </p>
-                        </div>
-                      </div>
+                      <table style={{ borderCollapse: 'collapse', border: 'none', margin: 0, padding: 0 }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ verticalAlign: 'middle', padding: 0, width: '28px' }}>
+                              <div
+                                style={{
+                                  width: '28px',
+                                  height: '28px',
+                                  borderRadius: '50%',
+                                  backgroundColor: '#8c6221',
+                                  color: '#ffffff',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                }}
+                              >
+                                <Globe style={{ width: '14px', height: '14px', color: '#ffffff' }} />
+                              </div>
+                            </td>
+                            <td style={{ verticalAlign: 'middle', padding: 0, paddingLeft: '8px' }}>
+                              <p style={{ fontWeight: 600, color: '#0f172a', fontSize: '11px', letterSpacing: '0.01px', margin: 0, lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                                www.orumaavenue.com
+                              </p>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </td>
                   </tr>
                 </tbody>
