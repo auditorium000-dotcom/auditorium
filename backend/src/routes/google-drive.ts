@@ -1,4 +1,7 @@
-import type { FastifyPluginAsync, FastifyReply } from 'fastify';
+import crypto from 'node:crypto';
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
+import { fromNodeHeaders } from 'better-auth/node';
+import { auth } from '../auth/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { config } from '../config/index.js';
 import {
@@ -8,7 +11,46 @@ import {
   exchangeGoogleAuthorizationCode,
   verifyGoogleDriveConnection,
 } from '../services/google-drive.js';
-import { createDatabaseBackup } from '../services/backup.js';
+import { createDatabaseBackup, BackupConcurrencyError } from '../services/backup.js';
+
+export function isAuthorizedCronRequest(authHeader?: string, cronSecret?: string): boolean {
+  if (!cronSecret || cronSecret.length === 0 || !authHeader || !authHeader.startsWith('Bearer ')) {
+    return false;
+  }
+  const token = authHeader.slice(7).trim();
+  const tokenBuf = Buffer.from(token);
+  const secretBuf = Buffer.from(cronSecret);
+  if (tokenBuf.length !== secretBuf.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(tokenBuf, secretBuf);
+}
+
+export async function requireCronOrAuth(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  // 1. Check Vercel Cron Bearer Token
+  if (isAuthorizedCronRequest(request.headers.authorization, config.CRON_SECRET)) {
+    return;
+  }
+
+  // 2. Check Better Auth Session
+  try {
+    const sessionData = await auth.api.getSession({
+      headers: fromNodeHeaders(request.headers),
+    });
+    if (sessionData && sessionData.user && sessionData.session) {
+      request.user = sessionData.user as any;
+      request.session = sessionData.session as any;
+      return;
+    }
+  } catch {
+    // Session validation failure
+  }
+
+  reply.code(401).send({
+    success: false,
+    error: 'Unauthorized: Valid CRON_SECRET bearer token or authenticated manager session required.',
+  });
+}
 
 interface CallbackQuery {
   code?: string;
@@ -72,6 +114,52 @@ function escapeHtml(str: string): string {
 
 export const googleDriveRoutes: FastifyPluginAsync = async (fastify) => {
   /**
+   * GET /api/google-drive/backup/cron & POST /api/google-drive/backup/cron
+   * Scheduled automated daily backup endpoint.
+   * Invoked by Vercel Cron with Authorization: Bearer <CRON_SECRET> or by authenticated managers.
+   * Executes atomic snapshot backup and uploads archive to Google Drive.
+   */
+  fastify.route({
+    method: ['GET', 'POST'],
+    url: '/google-drive/backup/cron',
+    preHandler: requireCronOrAuth,
+    handler: async (request, reply) => {
+      try {
+        request.log.info('Starting scheduled daily database backup to Google Drive...');
+        const backupResult = await createDatabaseBackup();
+        request.log.info(
+          { fileName: backupResult.fileName, sizeBytes: backupResult.sizeBytes },
+          'Scheduled database backup successfully uploaded to Google Drive'
+        );
+
+        return reply.code(200).send({
+          success: true,
+          backup: {
+            fileId: backupResult.fileId,
+            fileName: backupResult.fileName,
+            createdAt: backupResult.createdAt,
+            sizeBytes: backupResult.sizeBytes,
+          },
+        });
+      } catch (err: unknown) {
+        if (err instanceof BackupConcurrencyError) {
+          request.log.warn('Scheduled backup blocked: another backup is currently in progress');
+          return reply.code(409).send({
+            success: false,
+            error: 'A database backup is already in progress.',
+          });
+        }
+
+        request.log.error(err, 'Scheduled database backup failed');
+        return reply.code(500).send({
+          success: false,
+          error: 'Database backup failed',
+        });
+      }
+    },
+  });
+
+  /**
    * POST /api/google-drive/backup/test
    * Protected test/manual backup endpoint.
    * Creates a structured PostgreSQL snapshot and uploads it to the configured Google Drive hierarchy.
@@ -95,6 +183,14 @@ export const googleDriveRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
     } catch (err: unknown) {
+      if (err instanceof BackupConcurrencyError) {
+        request.log.warn('Manual backup blocked: another backup is currently in progress');
+        return reply.code(409).send({
+          success: false,
+          error: 'A database backup is already in progress.',
+        });
+      }
+
       request.log.error(err, 'Manual database backup failed');
       return reply.code(500).send({
         success: false,

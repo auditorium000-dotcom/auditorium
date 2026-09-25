@@ -23,7 +23,7 @@ const configSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().url().default('https://auditorium-frontend-one.vercel.app/api/google-drive/callback'),
   GOOGLE_REFRESH_TOKEN: z.string().optional(),
-
+  CRON_SECRET: z.string().optional(),
 });
 
 const parsedConfig = configSchema.safeParse({

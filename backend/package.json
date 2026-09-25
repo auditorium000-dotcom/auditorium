@@ -19,7 +19,8 @@
     "test:payments": "tsx src/scripts/test-payments-concurrency.ts",
     "test:api": "tsx src/scripts/test-api-suite.ts",
     "test:analytics": "tsx src/scripts/test-analytics.ts",
-    "test": "npm run test:concurrency && npm run test:payments && npm run test:api && npm run test:analytics"
+    "test:cron": "tsx src/scripts/test-backup-cron.ts",
+    "test": "npm run test:concurrency && npm run test:payments && npm run test:api && npm run test:analytics && npm run test:cron"
   },
   "dependencies": {
     "@auditorium/shared": "*",
