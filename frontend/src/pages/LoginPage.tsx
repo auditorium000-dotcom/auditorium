@@ -206,12 +206,38 @@ export const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Global Footer Note */}
-        <div className="mt-6 text-center">
+        {/* Global Footer Note & Legal Links */}
+        <div className="mt-6 text-center space-y-2">
+          <div className="flex items-center justify-center gap-3 text-xs text-slate-500">
+            <a
+              href="/privacy-policy"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState(null, '', '/privacy-policy');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="hover:text-indigo-600 transition-colors underline-offset-4 hover:underline"
+            >
+              Privacy Policy
+            </a>
+            <span className="text-slate-300">•</span>
+            <a
+              href="/terms"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState(null, '', '/terms');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="hover:text-indigo-600 transition-colors underline-offset-4 hover:underline"
+            >
+              Terms of Service
+            </a>
+          </div>
           <p className="text-[11px] text-slate-400 font-medium">
             © {new Date().getFullYear()} Oruma Avenue Auditorium. All rights reserved.
           </p>
         </div>
+
       </div>
     </div>
   );

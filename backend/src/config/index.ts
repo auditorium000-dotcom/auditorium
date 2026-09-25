@@ -19,6 +19,10 @@ const configSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL environment variable is required'),
   BETTER_AUTH_SECRET: z.string().min(16, 'BETTER_AUTH_SECRET must be at least 16 characters'),
   BETTER_AUTH_URL: z.string().default('http://localhost:5000'),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+GOOGLE_CLIENT_SECRET: z.string().optional(),
+GOOGLE_REDIRECT_URI: z.string().url().default('https://auditorium-backend.vercel.app/api/google-drive/callback'),
+GOOGLE_REFRESH_TOKEN: z.string().optional(),
 });
 
 const parsedConfig = configSchema.safeParse({

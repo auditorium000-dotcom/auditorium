@@ -5,3 +5,5 @@ export * from './BookingFormPage';
 export * from './BookingDetailsPage';
 export * from './LoginPage';
 export * from './DashboardPage';
+export * from './PrivacyPolicyPage';
+export * from './TermsOfServicePage';
