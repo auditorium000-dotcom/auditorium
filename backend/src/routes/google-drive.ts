@@ -8,6 +8,7 @@ import {
   exchangeGoogleAuthorizationCode,
   verifyGoogleDriveConnection,
 } from '../services/google-drive.js';
+import { createDatabaseBackup } from '../services/backup.js';
 
 interface CallbackQuery {
   code?: string;
@@ -70,6 +71,38 @@ function escapeHtml(str: string): string {
 }
 
 export const googleDriveRoutes: FastifyPluginAsync = async (fastify) => {
+  /**
+   * POST /api/google-drive/backup/test
+   * Protected test/manual backup endpoint.
+   * Creates a structured PostgreSQL snapshot and uploads it to the configured Google Drive hierarchy.
+   */
+  fastify.post('/google-drive/backup/test', { preHandler: requireAuth }, async (request, reply) => {
+    try {
+      request.log.info('Starting manual database backup to Google Drive...');
+      const backupResult = await createDatabaseBackup();
+      request.log.info(
+        { fileName: backupResult.fileName, sizeBytes: backupResult.sizeBytes },
+        'Database backup successfully uploaded to Google Drive'
+      );
+
+      return reply.code(200).send({
+        success: true,
+        backup: {
+          fileId: backupResult.fileId,
+          fileName: backupResult.fileName,
+          createdAt: backupResult.createdAt,
+          sizeBytes: backupResult.sizeBytes,
+        },
+      });
+    } catch (err: unknown) {
+      request.log.error(err, 'Manual database backup failed');
+      return reply.code(500).send({
+        success: false,
+        error: 'Database backup failed',
+      });
+    }
+  });
+
   /**
    * GET /api/google-drive/status
    * Protected diagnostic endpoint to verify that the configured Google Drive refresh token works.
