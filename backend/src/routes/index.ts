@@ -4,6 +4,7 @@ import { authRoutes } from './auth.js';
 import { bookingRoutes } from './bookings.js';
 import { paymentRoutes } from './payments.js';
 import { analyticsRoutes } from './analytics.js';
+import { googleDriveRoutes } from './google-drive.js';
 
 export const appRoutes: FastifyPluginAsync = async (fastify) => {
   // API prefix routes (/api/*)
@@ -12,7 +13,5 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(bookingRoutes);
   await fastify.register(paymentRoutes);
   await fastify.register(analyticsRoutes);
+  await fastify.register(googleDriveRoutes);
 };
-
-
-
