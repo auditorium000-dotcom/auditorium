@@ -6,6 +6,7 @@ import {
   validateOAuthState,
   getGoogleAuthorizationUrl,
   exchangeGoogleAuthorizationCode,
+  verifyGoogleDriveConnection,
 } from '../services/google-drive.js';
 
 interface CallbackQuery {
@@ -70,11 +71,32 @@ function escapeHtml(str: string): string {
 
 export const googleDriveRoutes: FastifyPluginAsync = async (fastify) => {
   /**
+   * GET /api/google-drive/status
+   * Protected diagnostic endpoint to verify that the configured Google Drive refresh token works.
+   */
+  fastify.get('/google-drive/status', { preHandler: requireAuth }, async (_request, reply) => {
+    try {
+      await verifyGoogleDriveConnection();
+      return reply.code(200).send({
+        connected: true,
+        service: 'google-drive',
+      });
+    } catch {
+      return reply.code(200).send({
+        connected: false,
+        service: 'google-drive',
+        error: 'Google Drive authentication failed',
+      });
+    }
+  });
+
+  /**
    * GET /api/google-drive/auth
    * Protected endpoint for authenticated managers to initiate Google Drive OAuth flow.
    * Generates a cryptographically signed state, stores it in a secure cookie, and returns the authorization URL.
    */
   fastify.get('/google-drive/auth', { preHandler: requireAuth }, async (_request, reply) => {
+
     try {
       const state = generateOAuthState();
       setOAuthStateCookie(reply, state);

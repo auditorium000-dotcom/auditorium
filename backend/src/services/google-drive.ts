@@ -144,3 +144,33 @@ export async function exchangeGoogleAuthorizationCode(code: string): Promise<Cre
 
   return tokens;
 }
+
+/**
+ * Creates an authenticated Google Drive client using the configured refresh token.
+ * Throws if required OAuth credentials or GOOGLE_REFRESH_TOKEN are absent.
+ */
+export function getAuthenticatedDriveClient() {
+  const refreshToken = config.GOOGLE_REFRESH_TOKEN;
+  if (!refreshToken || !refreshToken.trim()) {
+    throw new Error('Google Drive refresh token is not configured.');
+  }
+
+  const oauth2Client = createGoogleOAuthClient();
+  oauth2Client.setCredentials({ refresh_token: refreshToken.trim() });
+
+  return google.drive({ version: 'v3', auth: oauth2Client });
+}
+
+/**
+ * Performs a minimal live API request to test connectivity and verify that
+ * the configured refresh token is valid and accepted by Google Drive.
+ */
+export async function verifyGoogleDriveConnection(): Promise<boolean> {
+  const drive = getAuthenticatedDriveClient();
+  const res = await drive.files.list({
+    pageSize: 1,
+    fields: 'files(id,name,mimeType)',
+  });
+
+  return res.status === 200;
+}
