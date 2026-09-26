@@ -1,6 +1,13 @@
 import type { Booking } from '../types/booking';
-import type { Payment, CreatePaymentPayload } from '../types/payment';
+import type { Payment, CreatePaymentPayload, PaymentMethod } from '../types/payment';
 import type { YearlyAnalyticsSummary } from '@auditorium/shared';
+import type {
+  DashboardAnalytics,
+  DateRangePreset,
+  PaginatedPaymentsResponse,
+  PaginatedOutstandingResponse,
+  BackupStatusResponse,
+} from '../types/dashboard';
 
 export const API_BASE_URL = import.meta.env.PROD
   ? '/api'
@@ -371,3 +378,270 @@ export async function fetchMonthlyAnalytics(year?: number): Promise<YearlyAnalyt
   return response.json();
 }
 
+export interface FetchDashboardParams {
+  preset?: DateRangePreset;
+  startDate?: string;
+  endDate?: string;
+}
+
+/**
+ * Fetches dashboard KPI aggregation, breakdowns, and today's counts via GET /api/analytics/dashboard
+ */
+export async function fetchDashboardAnalytics(
+  params?: FetchDashboardParams
+): Promise<DashboardAnalytics> {
+  const query = new URLSearchParams();
+  if (params?.preset) query.set('preset', params.preset);
+  if (params?.startDate) query.set('startDate', params.startDate);
+  if (params?.endDate) query.set('endDate', params.endDate);
+  query.set('_t', Date.now().toString());
+
+  const url = `${API_BASE_URL}/analytics/dashboard?${query.toString()}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
+    },
+    cache: 'no-store',
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let errorMessage = 'Failed to fetch dashboard analytics';
+    try {
+      const errorData = await response.json();
+      if (errorData.message) errorMessage = errorData.message;
+    } catch {
+      // Ignored
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
+
+export interface FetchPaymentsParams {
+  startDate?: string;
+  endDate?: string;
+  paymentMethod?: PaymentMethod;
+  minAmount?: number;
+  maxAmount?: number;
+  search?: string;
+  sortBy?: 'paymentDate' | 'amount' | 'createdAt';
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}
+
+/**
+ * Fetches paginated global payments with filters, search, and sorting via GET /api/payments
+ */
+export async function fetchGlobalPayments(
+  params?: FetchPaymentsParams
+): Promise<PaginatedPaymentsResponse> {
+  const query = new URLSearchParams();
+  if (params?.startDate) query.set('startDate', params.startDate);
+  if (params?.endDate) query.set('endDate', params.endDate);
+  if (params?.paymentMethod) query.set('paymentMethod', params.paymentMethod);
+  if (params?.minAmount !== undefined && !isNaN(params.minAmount)) {
+    query.set('minAmount', params.minAmount.toString());
+  }
+  if (params?.maxAmount !== undefined && !isNaN(params.maxAmount)) {
+    query.set('maxAmount', params.maxAmount.toString());
+  }
+  if (params?.search) query.set('search', params.search);
+  if (params?.sortBy) query.set('sortBy', params.sortBy);
+  if (params?.sortOrder) query.set('sortOrder', params.sortOrder);
+  if (params?.page) query.set('page', params.page.toString());
+  if (params?.limit) query.set('limit', params.limit.toString());
+  query.set('_t', Date.now().toString());
+
+  const url = `${API_BASE_URL}/payments?${query.toString()}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
+    },
+    cache: 'no-store',
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let errorMessage = 'Failed to fetch payments';
+    try {
+      const errorData = await response.json();
+      if (errorData.message) errorMessage = errorData.message;
+    } catch {
+      // Ignored
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
+
+export interface ExportPaymentsParams {
+  startDate?: string;
+  endDate?: string;
+  paymentMethod?: PaymentMethod | 'ALL';
+  minAmount?: number;
+  maxAmount?: number;
+  search?: string;
+  sortBy?: 'paymentDate' | 'amount' | 'createdAt';
+  sortOrder?: 'asc' | 'desc';
+}
+
+/**
+ * Downloads an Excel XLSX export file of all payments matching the filter criteria.
+ */
+export async function downloadPaymentsExcel(params?: ExportPaymentsParams): Promise<void> {
+  const query = new URLSearchParams();
+  if (params?.startDate) query.set('startDate', params.startDate);
+  if (params?.endDate) query.set('endDate', params.endDate);
+  if (params?.paymentMethod && params.paymentMethod !== 'ALL') {
+    query.set('paymentMethod', params.paymentMethod);
+  }
+  if (params?.minAmount !== undefined && !isNaN(params.minAmount)) {
+    query.set('minAmount', params.minAmount.toString());
+  }
+  if (params?.maxAmount !== undefined && !isNaN(params.maxAmount)) {
+    query.set('maxAmount', params.maxAmount.toString());
+  }
+  if (params?.search) query.set('search', params.search);
+  if (params?.sortBy) query.set('sortBy', params.sortBy);
+  if (params?.sortOrder) query.set('sortOrder', params.sortOrder);
+  query.set('_t', Date.now().toString());
+
+  const url = `${API_BASE_URL}/payments/export?${query.toString()}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
+    },
+    cache: 'no-store',
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let errorMessage = 'Failed to export payments';
+    try {
+      const errorData = await response.json();
+      if (errorData.message) errorMessage = errorData.message;
+    } catch {
+      // Ignored
+    }
+    throw new Error(errorMessage);
+  }
+
+  // Extract filename from Content-Disposition header if available
+  const disposition = response.headers.get('content-disposition');
+  let filename = 'payments-export.xlsx';
+  if (disposition && disposition.includes('filename=')) {
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    if (match?.[1]) {
+      filename = match[1];
+    }
+  }
+
+  const blob = await response.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = downloadUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(downloadUrl);
+}
+
+export interface FetchOutstandingParams {
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+  sortBy?: 'outstandingBalance' | 'totalAmount' | 'amountPaid' | 'createdAt' | 'eventName';
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}
+
+/**
+ * Fetches paginated confirmed bookings with unpaid balances via GET /api/bookings/outstanding
+ */
+export async function fetchOutstandingBookings(
+  params?: FetchOutstandingParams
+): Promise<PaginatedOutstandingResponse> {
+  const query = new URLSearchParams();
+  if (params?.startDate) query.set('startDate', params.startDate);
+  if (params?.endDate) query.set('endDate', params.endDate);
+  if (params?.search) query.set('search', params.search);
+  if (params?.sortBy) query.set('sortBy', params.sortBy);
+  if (params?.sortOrder) query.set('sortOrder', params.sortOrder);
+  if (params?.page) query.set('page', params.page.toString());
+  if (params?.limit) query.set('limit', params.limit.toString());
+  query.set('_t', Date.now().toString());
+
+  const url = `${API_BASE_URL}/bookings/outstanding?${query.toString()}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
+    },
+    cache: 'no-store',
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let errorMessage = 'Failed to fetch outstanding bookings';
+    try {
+      const errorData = await response.json();
+      if (errorData.message) errorMessage = errorData.message;
+    } catch {
+      // Ignored
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
+
+/**
+ * Fetches sanitized Google Drive backup status and schedule info via GET /api/backup/status
+ */
+export async function fetchBackupStatus(): Promise<BackupStatusResponse> {
+  const url = `${API_BASE_URL}/backup/status?_t=${Date.now()}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
+    },
+    cache: 'no-store',
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let errorMessage = 'Failed to fetch backup status';
+    try {
+      const errorData = await response.json();
+      if (errorData.message) errorMessage = errorData.message;
+    } catch {
+      // Ignored
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}

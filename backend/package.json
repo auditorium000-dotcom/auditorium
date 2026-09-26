@@ -19,8 +19,10 @@
     "test:payments": "tsx src/scripts/test-payments-concurrency.ts",
     "test:api": "tsx src/scripts/test-api-suite.ts",
     "test:analytics": "tsx src/scripts/test-analytics.ts",
+    "test:dashboard": "tsx src/scripts/test-dashboard-reporting.ts",
     "test:cron": "tsx src/scripts/test-backup-cron.ts",
-    "test": "npm run test:concurrency && npm run test:payments && npm run test:api && npm run test:analytics && npm run test:cron"
+    "test:export": "tsx src/scripts/test-payments-export.ts",
+    "test": "npm run test:concurrency && npm run test:payments && npm run test:api && npm run test:analytics && npm run test:dashboard && npm run test:cron && npm run test:export"
   },
   "dependencies": {
     "@auditorium/shared": "*",
@@ -29,6 +31,7 @@
     "better-auth": "^1.7.4",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.45.2",
+    "exceljs": "^4.4.0",
     "fastify": "^5.2.1",
     "googleapis": "^182.0.0",
     "ws": "^8.18.1",

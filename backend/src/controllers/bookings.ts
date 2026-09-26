@@ -5,6 +5,7 @@ import {
   createBookingSchema,
   updateBookingSchema,
   queryBookingsSchema,
+  queryOutstandingBookingsSchema,
   bookingSessionIdParamSchema,
 } from '../schemas/bookings.js';
 import { AppError } from '../utils/errors.js';
@@ -14,6 +15,27 @@ const idParamSchema = z.object({
 });
 
 export class BookingController {
+  /**
+   * Handles GET /api/bookings/outstanding
+   */
+  async getOutstandingBookings(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const parsedQuery = queryOutstandingBookingsSchema.safeParse(request.query);
+      if (!parsedQuery.success) {
+        return reply.code(400).send({
+          error: 'VALIDATION_ERROR',
+          message: 'Invalid query parameters for outstanding bookings',
+          details: parsedQuery.error.flatten().fieldErrors,
+        });
+      }
+
+      const result = await bookingService.getOutstandingBookings(parsedQuery.data);
+      return reply.code(200).send(result);
+    } catch (err: unknown) {
+      return this.handleError(err, request, reply);
+    }
+  }
+
   /**
    * Handles POST /api/bookings
    */

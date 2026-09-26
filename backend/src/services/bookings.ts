@@ -1,10 +1,11 @@
-import { eq, and, or, ilike, inArray, gte, lte, desc, asc } from 'drizzle-orm';
+import { eq, and, or, ilike, inArray, gte, lte, desc, asc, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import * as schema from '../db/schema/index.js';
 import type {
   CreateBookingInput,
   UpdateBookingInput,
   QueryBookingsInput,
+  QueryOutstandingBookingsInput,
 } from '../schemas/bookings.js';
 import { ConflictError, NotFoundError } from '../utils/errors.js';
 
@@ -654,6 +655,236 @@ export class BookingService {
       };
     });
   }
+
+  /**
+   * Retrieves paginated confirmed bookings with unpaid balances (totalAmount > amountPaid).
+   */
+  async getOutstandingBookings(input: QueryOutstandingBookingsInput): Promise<PaginatedOutstandingBookingsResult> {
+    // 1. Build subquery for payments sum per booking
+    const paymentsSubquery = db
+      .select({
+        bookingId: schema.payments.bookingId,
+        totalPaid: sql<string>`COALESCE(SUM(${schema.payments.amount}), 0)`.as('total_paid'),
+      })
+      .from(schema.payments)
+      .groupBy(schema.payments.bookingId)
+      .as('p_sub');
+
+    const conditions = [
+      eq(schema.bookings.status, 'CONFIRMED'),
+      sql`${schema.bookings.totalAmount} > COALESCE(${paymentsSubquery.totalPaid}, 0)`,
+    ];
+
+    // Optional Search filter
+    if (input.search && input.search.length > 0) {
+      const pattern = `%${input.search}%`;
+      conditions.push(
+        or(
+          ilike(schema.bookings.eventName, pattern),
+          ilike(schema.bookings.contactName, pattern),
+          ilike(schema.bookings.contactPhone, pattern)
+        )!
+      );
+    }
+
+    // Optional Date Range filter (matches bookings with sessions in date range)
+    if (input.startDate || input.endDate) {
+      const sessionDateConditions = [];
+      if (input.startDate) sessionDateConditions.push(gte(schema.bookingSessions.bookingDate, input.startDate));
+      if (input.endDate) sessionDateConditions.push(lte(schema.bookingSessions.bookingDate, input.endDate));
+
+      const matchingBookingIds = db
+        .select({ bookingId: schema.bookingSessions.bookingId })
+        .from(schema.bookingSessions)
+        .where(and(...sessionDateConditions));
+
+      conditions.push(inArray(schema.bookings.id, matchingBookingIds));
+    }
+
+    const whereClause = and(...conditions);
+
+    // 2. Query summary totals for matching outstanding bookings
+    const [summaryRow] = await db
+      .select({
+        totalCount: sql<number>`COUNT(*)::int`,
+        totalBookingValue: sql<string>`COALESCE(SUM(${schema.bookings.totalAmount}), 0)`,
+        totalPaid: sql<string>`COALESCE(SUM(${paymentsSubquery.totalPaid}), 0)`,
+      })
+      .from(schema.bookings)
+      .leftJoin(paymentsSubquery, eq(schema.bookings.id, paymentsSubquery.bookingId))
+      .where(whereClause);
+
+    const totalItems = summaryRow?.totalCount || 0;
+    const totalBookingValue = Math.round(parseFloat(summaryRow?.totalBookingValue || '0') * 100) / 100;
+    const totalPaid = Math.round(parseFloat(summaryRow?.totalPaid || '0') * 100) / 100;
+    const totalOutstanding = Math.max(0, Math.round((totalBookingValue - totalPaid) * 100) / 100);
+    const totalPages = Math.max(1, Math.ceil(totalItems / input.limit));
+    const offset = (input.page - 1) * input.limit;
+
+    if (totalItems === 0) {
+      return {
+        bookings: [],
+        pagination: {
+          page: input.page,
+          limit: input.limit,
+          totalItems: 0,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+        summary: {
+          totalOutstanding: 0,
+          totalBookingValue: 0,
+          totalPaid: 0,
+          count: 0,
+        },
+      };
+    }
+
+    // 3. Determine sorting
+    let orderByClause;
+    const sortDir = input.sortOrder === 'asc' ? asc : desc;
+
+    if (input.sortBy === 'totalAmount') {
+      orderByClause = [sortDir(schema.bookings.totalAmount), desc(schema.bookings.createdAt)];
+    } else if (input.sortBy === 'amountPaid') {
+      orderByClause = [sortDir(paymentsSubquery.totalPaid), desc(schema.bookings.createdAt)];
+    } else if (input.sortBy === 'createdAt') {
+      orderByClause = [sortDir(schema.bookings.createdAt)];
+    } else if (input.sortBy === 'eventName') {
+      orderByClause = [sortDir(schema.bookings.eventName), desc(schema.bookings.createdAt)];
+    } else {
+      // Default: outstandingBalance = (totalAmount - totalPaid)
+      const balanceExpr = sql`(${schema.bookings.totalAmount} - COALESCE(${paymentsSubquery.totalPaid}, 0))`;
+      orderByClause = [sortDir(balanceExpr), desc(schema.bookings.createdAt)];
+    }
+
+    // 4. Fetch paginated records
+    const bookingRows = await db
+      .select({
+        booking: schema.bookings,
+        totalPaid: sql<string>`COALESCE(${paymentsSubquery.totalPaid}, 0)`,
+      })
+      .from(schema.bookings)
+      .leftJoin(paymentsSubquery, eq(schema.bookings.id, paymentsSubquery.bookingId))
+      .where(whereClause)
+      .orderBy(...orderByClause)
+      .limit(input.limit)
+      .offset(offset);
+
+    const bookingIds = bookingRows.map((r) => r.booking.id);
+
+    // 5. Fetch sessions for these paginated bookings
+    const sessions = await db
+      .select({
+        id: schema.bookingSessions.id,
+        bookingId: schema.bookingSessions.bookingId,
+        bookingDate: schema.bookingSessions.bookingDate,
+        session: schema.bookingSessions.session,
+        status: schema.bookingSessions.status,
+        startTime: schema.bookingSessions.startTime,
+        endTime: schema.bookingSessions.endTime,
+      })
+      .from(schema.bookingSessions)
+      .where(inArray(schema.bookingSessions.bookingId, bookingIds))
+      .orderBy(asc(schema.bookingSessions.bookingDate), asc(schema.bookingSessions.session));
+
+    const sessionsMap = new Map<string, typeof sessions>();
+    for (const s of sessions) {
+      const list = sessionsMap.get(s.bookingId) || [];
+      list.push(s);
+      sessionsMap.set(s.bookingId, list);
+    }
+
+    const items: OutstandingBookingItem[] = bookingRows.map((r) => {
+      const totalAmt = parseFloat(r.booking.totalAmount || '0');
+      const paidAmt = parseFloat(r.totalPaid || '0');
+      const balAmt = Math.max(0, totalAmt - paidAmt);
+      const bSessions = sessionsMap.get(r.booking.id) || [];
+      const primaryBookingDate = bSessions[0]?.bookingDate || '';
+
+      return {
+        id: r.booking.id,
+        eventName: r.booking.eventName,
+        contactName: r.booking.contactName,
+        contactPhone: r.booking.contactPhone,
+        eventType: r.booking.eventType,
+        bookingDate: primaryBookingDate,
+        status: r.booking.status,
+        totalAmount: totalAmt.toFixed(2),
+        advanceAmount: r.booking.advanceAmount,
+        amountPaid: paidAmt.toFixed(2),
+        outstandingBalance: balAmt.toFixed(2),
+        notes: r.booking.notes,
+        createdBy: r.booking.createdBy,
+        createdAt: r.booking.createdAt,
+        updatedAt: r.booking.updatedAt,
+        sessions: bSessions,
+      };
+    });
+
+    return {
+      bookings: items,
+      pagination: {
+        page: input.page,
+        limit: input.limit,
+        totalItems,
+        totalPages,
+        hasNextPage: input.page < totalPages,
+        hasPrevPage: input.page > 1,
+      },
+      summary: {
+        totalOutstanding,
+        totalBookingValue,
+        totalPaid,
+        count: totalItems,
+      },
+    };
+  }
+}
+
+export interface OutstandingBookingItem {
+  id: string;
+  eventName: string;
+  contactName: string;
+  contactPhone: string;
+  eventType: string;
+  bookingDate: string;
+  status: 'CONFIRMED' | 'CANCELLED';
+  totalAmount: string;
+  advanceAmount: string | null;
+  amountPaid: string;
+  outstandingBalance: string;
+  notes: string | null;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  sessions: {
+    id: string;
+    bookingDate: string;
+    session: 'MORNING' | 'EVENING';
+    status: 'BOOKED' | 'CANCELLED';
+    startTime: string | null;
+    endTime: string | null;
+  }[];
+}
+
+export interface PaginatedOutstandingBookingsResult {
+  bookings: OutstandingBookingItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+  summary: {
+    totalOutstanding: number;
+    totalBookingValue: number;
+    totalPaid: number;
+    count: number;
+  };
 }
 
 export const bookingService = new BookingService();

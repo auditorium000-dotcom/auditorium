@@ -1,8 +1,14 @@
-import { eq, desc, inArray } from 'drizzle-orm';
+import { eq, desc, asc, and, or, ilike, gte, lte, inArray, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import * as schema from '../db/schema/index.js';
-import type { CreatePaymentInput } from '../schemas/payments.js';
+import type { CreatePaymentInput, QueryPaymentsInput, ExportPaymentsInput } from '../schemas/payments.js';
 import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.js';
+import { getIstDayBoundaries } from '../utils/date-ranges.js';
+import {
+  type ExportPaymentRowItem,
+  buildPaymentsExcelWorkbook,
+  generatePaymentsExportFilename,
+} from './payments-export.js';
 
 export interface PaymentWithReceiver {
   id: string;
@@ -18,6 +24,34 @@ export interface PaymentWithReceiver {
   } | null;
   notes: string | null;
   createdAt: Date;
+}
+
+export interface GlobalPaymentItem extends PaymentWithReceiver {
+  booking: {
+    id: string;
+    eventName: string;
+    contactName: string;
+    contactPhone: string;
+    eventType: string;
+    status: 'CONFIRMED' | 'CANCELLED';
+    totalAmount: string;
+  };
+}
+
+export interface PaginatedPaymentsResult {
+  payments: GlobalPaymentItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+  summary: {
+    totalAmount: number;
+    count: number;
+  };
 }
 
 export class PaymentService {
@@ -188,6 +222,274 @@ export class PaymentService {
       ...p,
       receiver: receiversMap.get(p.receivedBy) || null,
     }));
+  }
+
+  /**
+   * Retrieves paginated payments across all bookings with multi-criteria filtering, search, and sorting.
+   */
+  async getGlobalPayments(input: QueryPaymentsInput): Promise<PaginatedPaymentsResult> {
+    const conditions = [];
+
+    // Date range filtering (by paymentDate in IST day boundaries)
+    if (input.startDate) {
+      const { startUtc } = getIstDayBoundaries(input.startDate);
+      conditions.push(gte(schema.payments.paymentDate, startUtc));
+    }
+    if (input.endDate) {
+      const { endUtc } = getIstDayBoundaries(input.endDate);
+      conditions.push(lte(schema.payments.paymentDate, endUtc));
+    }
+
+    // Payment method filtering
+    if (input.paymentMethod) {
+      conditions.push(eq(schema.payments.paymentMethod, input.paymentMethod));
+    }
+
+    // Amount range filtering
+    if (input.minAmount !== undefined) {
+      conditions.push(gte(schema.payments.amount, input.minAmount.toFixed(2)));
+    }
+    if (input.maxAmount !== undefined) {
+      conditions.push(lte(schema.payments.amount, input.maxAmount.toFixed(2)));
+    }
+
+    // Search query filtering
+    if (input.search && input.search.length > 0) {
+      const searchPattern = `%${input.search}%`;
+      conditions.push(
+        or(
+          ilike(schema.bookings.eventName, searchPattern),
+          ilike(schema.bookings.contactName, searchPattern),
+          ilike(schema.bookings.contactPhone, searchPattern),
+          ilike(schema.payments.notes, searchPattern),
+          ilike(schema.user.name, searchPattern)
+        )!
+      );
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // 1. Get summary count and total amount for matching records
+    const [summaryRow] = await db
+      .select({
+        totalCount: sql<number>`COUNT(*)::int`,
+        totalAmount: sql<string>`COALESCE(SUM(${schema.payments.amount}), 0)`,
+      })
+      .from(schema.payments)
+      .innerJoin(schema.bookings, eq(schema.payments.bookingId, schema.bookings.id))
+      .leftJoin(schema.user, eq(schema.payments.receivedBy, schema.user.id))
+      .where(whereClause);
+
+    const totalItems = summaryRow?.totalCount || 0;
+    const totalAmount = Math.round(parseFloat(summaryRow?.totalAmount || '0') * 100) / 100;
+    const totalPages = Math.max(1, Math.ceil(totalItems / input.limit));
+    const offset = (input.page - 1) * input.limit;
+
+    if (totalItems === 0) {
+      return {
+        payments: [],
+        pagination: {
+          page: input.page,
+          limit: input.limit,
+          totalItems: 0,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+        summary: {
+          totalAmount: 0,
+          count: 0,
+        },
+      };
+    }
+
+    // 2. Determine sorting
+    let orderByClause;
+    const sortDir = input.sortOrder === 'asc' ? asc : desc;
+
+    if (input.sortBy === 'amount') {
+      orderByClause = [sortDir(schema.payments.amount), desc(schema.payments.paymentDate)];
+    } else if (input.sortBy === 'createdAt') {
+      orderByClause = [sortDir(schema.payments.createdAt)];
+    } else {
+      // Default: paymentDate
+      orderByClause = [sortDir(schema.payments.paymentDate), desc(schema.payments.createdAt)];
+    }
+
+    // 3. Fetch paginated records with joins
+    const rows = await db
+      .select({
+        payment: schema.payments,
+        booking: {
+          id: schema.bookings.id,
+          eventName: schema.bookings.eventName,
+          contactName: schema.bookings.contactName,
+          contactPhone: schema.bookings.contactPhone,
+          eventType: schema.bookings.eventType,
+          status: schema.bookings.status,
+          totalAmount: schema.bookings.totalAmount,
+        },
+        receiver: {
+          id: schema.user.id,
+          name: schema.user.name,
+          email: schema.user.email,
+        },
+      })
+      .from(schema.payments)
+      .innerJoin(schema.bookings, eq(schema.payments.bookingId, schema.bookings.id))
+      .leftJoin(schema.user, eq(schema.payments.receivedBy, schema.user.id))
+      .where(whereClause)
+      .orderBy(...orderByClause)
+      .limit(input.limit)
+      .offset(offset);
+
+    const payments: GlobalPaymentItem[] = rows.map((r) => ({
+      ...r.payment,
+      booking: r.booking,
+      receiver: r.receiver?.id ? r.receiver : null,
+    }));
+
+    return {
+      payments,
+      pagination: {
+        page: input.page,
+        limit: input.limit,
+        totalItems,
+        totalPages,
+        hasNextPage: input.page < totalPages,
+        hasPrevPage: input.page > 1,
+      },
+      summary: {
+        totalAmount,
+        count: totalItems,
+      },
+    };
+  }
+
+  /**
+   * Generates a fully formatted Excel workbook for all payments matching the filter criteria.
+   */
+  async generatePaymentsExcel(
+    input: ExportPaymentsInput
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const conditions = [];
+
+    // Date range filtering (by paymentDate in IST day boundaries)
+    if (input.startDate) {
+      const { startUtc } = getIstDayBoundaries(input.startDate);
+      conditions.push(gte(schema.payments.paymentDate, startUtc));
+    }
+    if (input.endDate) {
+      const { endUtc } = getIstDayBoundaries(input.endDate);
+      conditions.push(lte(schema.payments.paymentDate, endUtc));
+    }
+
+    // Payment method filtering
+    if (input.paymentMethod) {
+      conditions.push(eq(schema.payments.paymentMethod, input.paymentMethod));
+    }
+
+    // Amount range filtering
+    if (input.minAmount !== undefined) {
+      conditions.push(gte(schema.payments.amount, input.minAmount.toFixed(2)));
+    }
+    if (input.maxAmount !== undefined) {
+      conditions.push(lte(schema.payments.amount, input.maxAmount.toFixed(2)));
+    }
+
+    // Search query filtering
+    if (input.search && input.search.length > 0) {
+      const searchPattern = `%${input.search}%`;
+      conditions.push(
+        or(
+          ilike(schema.bookings.eventName, searchPattern),
+          ilike(schema.bookings.contactName, searchPattern),
+          ilike(schema.bookings.contactPhone, searchPattern),
+          ilike(schema.payments.notes, searchPattern),
+          ilike(schema.user.name, searchPattern)
+        )!
+      );
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Determine sorting
+    let orderByClause;
+    const sortDir = input.sortOrder === 'asc' ? asc : desc;
+
+    if (input.sortBy === 'amount') {
+      orderByClause = [sortDir(schema.payments.amount), desc(schema.payments.paymentDate)];
+    } else if (input.sortBy === 'createdAt') {
+      orderByClause = [sortDir(schema.payments.createdAt)];
+    } else {
+      // Default: paymentDate
+      orderByClause = [sortDir(schema.payments.paymentDate), desc(schema.payments.createdAt)];
+    }
+
+    // Fetch ALL matching rows (no limit/offset)
+    const rows = await db
+      .select({
+        payment: schema.payments,
+        booking: {
+          id: schema.bookings.id,
+          eventName: schema.bookings.eventName,
+          contactName: schema.bookings.contactName,
+          contactPhone: schema.bookings.contactPhone,
+          eventType: schema.bookings.eventType,
+          status: schema.bookings.status,
+          totalAmount: schema.bookings.totalAmount,
+        },
+        receiver: {
+          id: schema.user.id,
+          name: schema.user.name,
+          email: schema.user.email,
+        },
+      })
+      .from(schema.payments)
+      .innerJoin(schema.bookings, eq(schema.payments.bookingId, schema.bookings.id))
+      .leftJoin(schema.user, eq(schema.payments.receivedBy, schema.user.id))
+      .where(whereClause)
+      .orderBy(...orderByClause);
+
+    // Retrieve booking dates from booking_sessions for these bookings
+    const bookingIds = [...new Set(rows.map((r) => r.booking.id))];
+    const bookingDatesMap = new Map<string, string>();
+
+    if (bookingIds.length > 0) {
+      const sessions = await db
+        .select({
+          bookingId: schema.bookingSessions.bookingId,
+          bookingDate: schema.bookingSessions.bookingDate,
+        })
+        .from(schema.bookingSessions)
+        .where(inArray(schema.bookingSessions.bookingId, bookingIds))
+        .orderBy(asc(schema.bookingSessions.bookingDate));
+
+      for (const s of sessions) {
+        if (!bookingDatesMap.has(s.bookingId)) {
+          bookingDatesMap.set(s.bookingId, s.bookingDate);
+        }
+      }
+    }
+
+    const exportRows: ExportPaymentRowItem[] = rows.map((r) => ({
+      id: r.payment.id,
+      paymentDate: r.payment.paymentDate,
+      amount: r.payment.amount,
+      paymentMethod: r.payment.paymentMethod,
+      receivedBy: r.payment.receivedBy,
+      receivedByName: r.receiver?.name || r.receiver?.email || 'Manager',
+      notes: r.payment.notes,
+      booking: {
+        ...r.booking,
+        bookingDate: bookingDatesMap.get(r.booking.id) || '',
+      },
+    }));
+
+    const filename = generatePaymentsExportFilename(input);
+    const buffer = await buildPaymentsExcelWorkbook(exportRows, input);
+
+    return { buffer, filename };
   }
 }
 

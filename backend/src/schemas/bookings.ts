@@ -140,6 +140,42 @@ export const queryBookingsSchema = z.object({
   search: z.string().trim().optional(),
 });
 
+export const outstandingSortByEnum = z.enum([
+  'outstandingBalance',
+  'totalAmount',
+  'amountPaid',
+  'createdAt',
+  'eventName',
+]);
+
+export const queryOutstandingBookingsSchema = z
+  .object({
+    startDate: z
+      .string()
+      .trim()
+      .regex(DATE_REGEX, 'startDate must be formatted as YYYY-MM-DD')
+      .optional(),
+    endDate: z
+      .string()
+      .trim()
+      .regex(DATE_REGEX, 'endDate must be formatted as YYYY-MM-DD')
+      .optional(),
+    search: z.string().trim().optional(),
+    sortBy: outstandingSortByEnum.default('outstandingBalance'),
+    sortOrder: z.enum(['asc', 'desc']).default('desc'),
+    page: z.coerce.number().int().min(1, 'page must be >= 1').default(1),
+    limit: z.coerce.number().int().min(1, 'limit must be >= 1').max(100, 'limit cannot exceed 100').default(25),
+  })
+  .superRefine((data, ctx) => {
+    if (data.startDate && data.endDate && data.startDate > data.endDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'startDate cannot be after endDate',
+        path: ['startDate'],
+      });
+    }
+  });
+
 export const bookingSessionIdParamSchema = z.object({
   id: z.string().uuid('Invalid booking ID format'),
   sessionId: z.string().uuid('Invalid session ID format'),
@@ -148,4 +184,5 @@ export const bookingSessionIdParamSchema = z.object({
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 export type UpdateBookingInput = z.infer<typeof updateBookingSchema>;
 export type QueryBookingsInput = z.infer<typeof queryBookingsSchema>;
+export type QueryOutstandingBookingsInput = z.infer<typeof queryOutstandingBookingsSchema>;
 export type BookingSessionItemInput = z.infer<typeof bookingSessionItemSchema>;

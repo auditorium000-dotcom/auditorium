@@ -1,9 +1,62 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { paymentService } from '../services/payments.js';
-import { createPaymentSchema, bookingIdParamSchema } from '../schemas/payments.js';
+import {
+  createPaymentSchema,
+  bookingIdParamSchema,
+  queryPaymentsSchema,
+  exportPaymentsSchema,
+} from '../schemas/payments.js';
 import { AppError } from '../utils/errors.js';
 
 export class PaymentController {
+  /**
+   * Handles GET /api/payments (Global payments search, filter, sort, and pagination)
+   */
+  async getGlobalPayments(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const parsedQuery = queryPaymentsSchema.safeParse(request.query);
+      if (!parsedQuery.success) {
+        return reply.code(400).send({
+          error: 'VALIDATION_ERROR',
+          message: 'Invalid query parameters for payments',
+          details: parsedQuery.error.flatten().fieldErrors,
+        });
+      }
+
+      const result = await paymentService.getGlobalPayments(parsedQuery.data);
+      return reply.code(200).send(result);
+    } catch (err: unknown) {
+      return this.handleError(err, request, reply);
+    }
+  }
+
+  /**
+   * Handles GET /api/payments/export (Download filtered payments as Excel XLSX workbook)
+   */
+  async exportPayments(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const parsedQuery = exportPaymentsSchema.safeParse(request.query);
+      if (!parsedQuery.success) {
+        return reply.code(400).send({
+          error: 'VALIDATION_ERROR',
+          message: 'Invalid filter parameters for payment export',
+          details: parsedQuery.error.flatten().fieldErrors,
+        });
+      }
+
+      const { buffer, filename } = await paymentService.generatePaymentsExcel(parsedQuery.data);
+
+      return reply
+        .code(200)
+        .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .header('Content-Disposition', `attachment; filename="${filename}"`)
+        .header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        .send(buffer);
+    } catch (err: unknown) {
+      return this.handleError(err, request, reply);
+    }
+  }
+
   /**
    * Handles POST /api/bookings/:id/payments
    */

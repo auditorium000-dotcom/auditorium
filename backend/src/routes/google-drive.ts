@@ -11,7 +11,11 @@ import {
   exchangeGoogleAuthorizationCode,
   verifyGoogleDriveConnection,
 } from '../services/google-drive.js';
-import { createDatabaseBackup, BackupConcurrencyError } from '../services/backup.js';
+import {
+  createDatabaseBackup,
+  BackupConcurrencyError,
+  getBackupStatus,
+} from '../services/backup.js';
 
 export function isAuthorizedCronRequest(authHeader?: string, cronSecret?: string): boolean {
   if (!cronSecret || cronSecret.length === 0 || !authHeader || !authHeader.startsWith('Bearer ')) {
@@ -139,6 +143,8 @@ export const googleDriveRoutes: FastifyPluginAsync = async (fastify) => {
             fileName: backupResult.fileName,
             createdAt: backupResult.createdAt,
             sizeBytes: backupResult.sizeBytes,
+            jsonFile: backupResult.jsonFile,
+            excelFile: backupResult.excelFile,
           },
         });
       } catch (err: unknown) {
@@ -169,8 +175,11 @@ export const googleDriveRoutes: FastifyPluginAsync = async (fastify) => {
       request.log.info('Starting manual database backup to Google Drive...');
       const backupResult = await createDatabaseBackup();
       request.log.info(
-        { fileName: backupResult.fileName, sizeBytes: backupResult.sizeBytes },
-        'Database backup successfully uploaded to Google Drive'
+        {
+          jsonFileName: backupResult.jsonFile.fileName,
+          excelFileName: backupResult.excelFile.fileName,
+        },
+        'Database backup (JSON + Excel) successfully uploaded to Google Drive'
       );
 
       return reply.code(200).send({
@@ -180,6 +189,8 @@ export const googleDriveRoutes: FastifyPluginAsync = async (fastify) => {
           fileName: backupResult.fileName,
           createdAt: backupResult.createdAt,
           sizeBytes: backupResult.sizeBytes,
+          jsonFile: backupResult.jsonFile,
+          excelFile: backupResult.excelFile,
         },
       });
     } catch (err: unknown) {
@@ -218,6 +229,31 @@ export const googleDriveRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
   });
+
+  /**
+   * GET /api/backup/status & GET /api/google-drive/backup/status
+   * Protected sanitized endpoint returning backup health, Google Drive connectivity,
+   * schedule, and metadata of the latest JSON and Excel backups.
+   * Absolutely NO secrets or credentials leaked.
+   */
+  const handleBackupStatus = async (_request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const status = await getBackupStatus();
+      return reply.code(200).send(status);
+    } catch {
+      return reply.code(200).send({
+        success: true,
+        googleDriveConnected: false,
+        cronSchedule: '30 20 * * *',
+        cronScheduleDescription: 'Daily at 02:00 AM IST / 20:30 UTC',
+        nextScheduledBackupIst: '02:00 AM IST (Daily)',
+        latestBackup: null,
+      });
+    }
+  };
+
+  fastify.get('/backup/status', { preHandler: requireAuth }, handleBackupStatus);
+  fastify.get('/google-drive/backup/status', { preHandler: requireAuth }, handleBackupStatus);
 
   /**
    * GET /api/google-drive/auth

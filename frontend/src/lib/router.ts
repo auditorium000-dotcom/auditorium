@@ -1,8 +1,10 @@
 import type { SessionType } from '../types/booking';
 
+export type DashboardTab = 'overview' | 'bookings' | 'payments' | 'outstanding' | 'analytics';
+
 export type ActiveView =
+  | { type: 'DASHBOARD'; tab?: DashboardTab }
   | { type: 'CALENDAR'; initialYear?: number; initialMonthIndex?: number }
-  | { type: 'MONTHLY_ANALYTICS' }
   | { type: 'DATE_BOOKING'; dateKey: string }
   | { type: 'BOOKING_FORM'; dateKey: string; session: SessionType }
   | { type: 'BOOKING_DETAILS'; bookingId: string; returnDateKey?: string; fromCreate?: boolean }
@@ -18,14 +20,18 @@ export interface HistoryState {
  */
 export function viewToPath(view: ActiveView): string {
   switch (view.type) {
+    case 'DASHBOARD': {
+      if (view.tab && view.tab !== 'overview') {
+        return `/?tab=${encodeURIComponent(view.tab)}`;
+      }
+      return '/';
+    }
     case 'CALENDAR': {
       if (view.initialYear !== undefined && view.initialMonthIndex !== undefined) {
         return `/calendar?year=${view.initialYear}&month=${view.initialMonthIndex}`;
       }
-      return '/';
+      return '/calendar';
     }
-    case 'MONTHLY_ANALYTICS':
-      return '/analytics';
     case 'DATE_BOOKING':
       return `/date/${encodeURIComponent(view.dateKey)}`;
     case 'BOOKING_FORM':
@@ -56,8 +62,17 @@ export function pathToView(pathname: string, search: string): ActiveView {
   const normalizedPath = pathname.replace(/\/+$/, '') || '/';
   const searchParams = new URLSearchParams(search);
 
-  // 1. / or /calendar
-  if (normalizedPath === '/' || normalizedPath === '/calendar') {
+  // 1. / or /dashboard
+  if (normalizedPath === '/' || normalizedPath === '/dashboard') {
+    const tabParam = searchParams.get('tab') as DashboardTab | null;
+    if (tabParam && ['overview', 'bookings', 'payments', 'outstanding', 'analytics'].includes(tabParam)) {
+      return { type: 'DASHBOARD', tab: tabParam };
+    }
+    return { type: 'DASHBOARD', tab: 'overview' };
+  }
+
+  // 2. /calendar
+  if (normalizedPath === '/calendar') {
     const yearParam = searchParams.get('year');
     const monthParam = searchParams.get('month');
     const initialYear = yearParam ? parseInt(yearParam, 10) : undefined;
@@ -76,18 +91,18 @@ export function pathToView(pathname: string, search: string): ActiveView {
     return { type: 'CALENDAR' };
   }
 
-  // 2. /analytics
+  // 3. /analytics -> direct route maps to Dashboard analytics tab
   if (normalizedPath === '/analytics') {
-    return { type: 'MONTHLY_ANALYTICS' };
+    return { type: 'DASHBOARD', tab: 'analytics' };
   }
 
-  // 3. /date/:dateKey (e.g. /date/2026-09-16)
+  // 4. /date/:dateKey (e.g. /date/2026-09-16)
   const dateMatch = normalizedPath.match(/^\/date\/(\d{4}-\d{2}-\d{2})$/);
   if (dateMatch) {
     return { type: 'DATE_BOOKING', dateKey: dateMatch[1] };
   }
 
-  // 4. /book/:dateKey/:session (e.g. /book/2026-09-16/MORNING)
+  // 5. /book/:dateKey/:session (e.g. /book/2026-09-16/MORNING)
   const bookMatch = normalizedPath.match(/^\/book\/(\d{4}-\d{2}-\d{2})\/(MORNING|EVENING)$/);
   if (bookMatch) {
     return {
@@ -97,7 +112,7 @@ export function pathToView(pathname: string, search: string): ActiveView {
     };
   }
 
-  // 5. /bookings/:id/edit
+  // 6. /bookings/:id/edit
   const editMatch = normalizedPath.match(/^\/bookings\/([^/]+)\/edit$/);
   if (editMatch) {
     const returnDateKey = searchParams.get('returnDateKey') || undefined;
@@ -108,7 +123,7 @@ export function pathToView(pathname: string, search: string): ActiveView {
     };
   }
 
-  // 6. /bookings/:id
+  // 7. /bookings/:id
   const bookingMatch = normalizedPath.match(/^\/bookings\/([^/]+)$/);
   if (bookingMatch) {
     const returnDateKey = searchParams.get('returnDateKey') || undefined;
@@ -122,7 +137,7 @@ export function pathToView(pathname: string, search: string): ActiveView {
   }
 
   // Fallback for any unknown route
-  return { type: 'CALENDAR' };
+  return { type: 'DASHBOARD', tab: 'overview' };
 }
 
 /**
@@ -131,12 +146,14 @@ export function pathToView(pathname: string, search: string): ActiveView {
 export function isSameView(a: ActiveView, b: ActiveView): boolean {
   if (a.type !== b.type) return false;
   switch (a.type) {
+    case 'DASHBOARD': {
+      const bDash = b as Extract<ActiveView, { type: 'DASHBOARD' }>;
+      return (a.tab || 'overview') === (bDash.tab || 'overview');
+    }
     case 'CALENDAR': {
       const bCal = b as Extract<ActiveView, { type: 'CALENDAR' }>;
       return a.initialYear === bCal.initialYear && a.initialMonthIndex === bCal.initialMonthIndex;
     }
-    case 'MONTHLY_ANALYTICS':
-      return true;
     case 'DATE_BOOKING': {
       const bDate = b as Extract<ActiveView, { type: 'DATE_BOOKING' }>;
       return a.dateKey === bDate.dateKey;

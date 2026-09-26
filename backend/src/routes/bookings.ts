@@ -12,6 +12,11 @@ export const bookingRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /api/bookings - List bookings with optional filters
   fastify.get('/bookings', (req, reply) => bookingController.getBookings(req, reply));
 
+  // GET /api/bookings/outstanding - List confirmed bookings with unpaid balances
+  fastify.get('/bookings/outstanding', (req, reply) =>
+    bookingController.getOutstandingBookings(req, reply)
+  );
+
   // GET /api/bookings/:id - Get single booking details
   fastify.get('/bookings/:id', (req, reply) => bookingController.getBookingById(req, reply));
 

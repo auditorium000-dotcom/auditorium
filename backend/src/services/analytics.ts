@@ -1,7 +1,46 @@
-import { eq, inArray, asc } from 'drizzle-orm';
+import { eq, inArray, asc, and, gte, lte, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import * as schema from '../db/schema/index.js';
 import type { YearlyAnalyticsSummary, MonthlyBookingStats } from '@auditorium/shared';
+import { resolveDateRange, getCurrentIstDate } from '../utils/date-ranges.js';
+import type { DashboardAnalyticsQueryInput } from '../schemas/analytics.js';
+
+export interface DashboardAnalyticsResult {
+  period: {
+    preset: string;
+    startDate: string;
+    endDate: string;
+  };
+  totalBookings: number;
+  confirmedBookings: number;
+  cancelledBookings: number;
+  totalBookingValue: number;
+  totalAmountCollected: number;
+  outstandingAmount: number;
+  todayBookingsCount: number;
+  periodRevenue: number;
+  kpis: {
+    totalBookings: number;
+    confirmedBookings: number;
+    cancelledBookings: number;
+    totalBookingValue: number;
+    totalAmountCollected: number;
+    outstandingAmount: number;
+    todayBookingsCount: number;
+    periodRevenue: number;
+  };
+  paymentMethodBreakdown: {
+    method: 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CHEQUE' | 'OTHER';
+    amount: number;
+    count: number;
+    percentage: number;
+  }[];
+  sessionCounts: {
+    morning: number;
+    evening: number;
+    total: number;
+  };
+}
 
 const MONTH_NAMES = [
   'January',
@@ -38,6 +77,160 @@ function getDaysInMonth(year: number, monthIndex: number): number {
 }
 
 export class AnalyticsService {
+  /**
+   * Computes server-side dashboard KPI aggregation for the selected period
+   */
+  async getDashboardAnalytics(input: DashboardAnalyticsQueryInput): Promise<DashboardAnalyticsResult> {
+    const range = resolveDateRange(input.preset, input.startDate, input.endDate);
+
+    // 1. Query Payments in date range (by paymentDate in IST range)
+    const paymentRows = await db
+      .select({
+        paymentMethod: schema.payments.paymentMethod,
+        totalAmount: sql<string>`COALESCE(SUM(${schema.payments.amount}), 0)`,
+        count: sql<number>`COUNT(*)::int`,
+      })
+      .from(schema.payments)
+      .where(
+        and(
+          gte(schema.payments.paymentDate, range.startDateTimeUtc),
+          lte(schema.payments.paymentDate, range.endDateTimeUtc)
+        )
+      )
+      .groupBy(schema.payments.paymentMethod);
+
+    let totalAmountCollected = 0;
+    const paymentMap = new Map<string, { amount: number; count: number }>();
+    for (const r of paymentRows) {
+      const amt = parseFloat(r.totalAmount || '0');
+      totalAmountCollected += amt;
+      paymentMap.set(r.paymentMethod, { amount: amt, count: r.count });
+    }
+    totalAmountCollected = Math.round(totalAmountCollected * 100) / 100;
+
+    const allMethods: ('CASH' | 'UPI' | 'BANK_TRANSFER' | 'CHEQUE' | 'OTHER')[] = [
+      'UPI',
+      'BANK_TRANSFER',
+      'CASH',
+      'CHEQUE',
+      'OTHER',
+    ];
+
+    const paymentMethodBreakdown = allMethods.map((method) => {
+      const data = paymentMap.get(method) || { amount: 0, count: 0 };
+      const percentage =
+        totalAmountCollected > 0
+          ? Math.round((data.amount / totalAmountCollected) * 1000) / 10
+          : 0;
+      return {
+        method,
+        amount: Math.round(data.amount * 100) / 100,
+        count: data.count,
+        percentage,
+      };
+    });
+
+    // 2. Query Session Counts in date range (by bookingDate)
+    const sessionRows = await db
+      .select({
+        session: schema.bookingSessions.session,
+        count: sql<number>`COUNT(*)::int`,
+      })
+      .from(schema.bookingSessions)
+      .where(
+        and(
+          gte(schema.bookingSessions.bookingDate, range.startDate),
+          lte(schema.bookingSessions.bookingDate, range.endDate),
+          eq(schema.bookingSessions.status, 'BOOKED')
+        )
+      )
+      .groupBy(schema.bookingSessions.session);
+
+    let morningSessions = 0;
+    let eveningSessions = 0;
+    for (const s of sessionRows) {
+      if (s.session === 'MORNING') morningSessions = s.count;
+      if (s.session === 'EVENING') eveningSessions = s.count;
+    }
+    const totalSessions = morningSessions + eveningSessions;
+
+    // 3. Query Today's Active Bookings (current IST date)
+    const istNow = getCurrentIstDate();
+    const todayRes = await db
+      .select({
+        count: sql<number>`COUNT(DISTINCT ${schema.bookingSessions.bookingId})::int`,
+      })
+      .from(schema.bookingSessions)
+      .where(
+        and(
+          eq(schema.bookingSessions.bookingDate, istNow.formattedDate),
+          eq(schema.bookingSessions.status, 'BOOKED')
+        )
+      );
+    const todayBookingsCount = todayRes[0]?.count || 0;
+
+    // 4. Query Bookings associated with this date period (having session in period)
+    const periodBookings = await db
+      .select({
+        id: schema.bookings.id,
+        status: schema.bookings.status,
+        totalAmount: schema.bookings.totalAmount,
+      })
+      .from(schema.bookings)
+      .innerJoin(
+        schema.bookingSessions,
+        eq(schema.bookings.id, schema.bookingSessions.bookingId)
+      )
+      .where(
+        and(
+          gte(schema.bookingSessions.bookingDate, range.startDate),
+          lte(schema.bookingSessions.bookingDate, range.endDate)
+        )
+      )
+      .groupBy(schema.bookings.id, schema.bookings.status, schema.bookings.totalAmount);
+
+    const totalBookings = periodBookings.length;
+    const confirmedBookings = periodBookings.filter((b) => b.status === 'CONFIRMED').length;
+    const cancelledBookings = periodBookings.filter((b) => b.status === 'CANCELLED').length;
+    const totalBookingValue = Math.round(
+      periodBookings
+        .filter((b) => b.status === 'CONFIRMED')
+        .reduce((sum, b) => sum + parseFloat(b.totalAmount || '0'), 0) * 100
+    ) / 100;
+
+    const outstandingAmount = Math.max(
+      0,
+      Math.round((totalBookingValue - totalAmountCollected) * 100) / 100
+    );
+
+    const kpis = {
+      totalBookings,
+      confirmedBookings,
+      cancelledBookings,
+      totalBookingValue,
+      totalAmountCollected,
+      outstandingAmount,
+      todayBookingsCount,
+      periodRevenue: totalAmountCollected,
+    };
+
+    return {
+      period: {
+        preset: range.preset,
+        startDate: range.startDate,
+        endDate: range.endDate,
+      },
+      ...kpis,
+      kpis,
+      paymentMethodBreakdown,
+      sessionCounts: {
+        morning: morningSessions,
+        evening: eveningSessions,
+        total: totalSessions,
+      },
+    };
+  }
+
   /**
    * Computes comprehensive monthly booking statistics and yearly analytics summary
    */
